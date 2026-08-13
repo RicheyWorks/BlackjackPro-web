@@ -20,6 +20,7 @@ export function Table() {
   const mode = useTable((s) => s.mode);
   const pitBusy = useTable((s) => s.pitBusy);
   const realityCheck = useTable((s) => s.realityCheck);
+  const ackReality = useTable((s) => s.ackReality);
   const snap = useTable((s) => s.snap);
   const theme = useTable((s) => s.theme);
   const toast = useTable((s) => s.toast);
@@ -162,9 +163,19 @@ export function Table() {
         </p>
       )}
       {realityCheck && mode === "pit" && (
-        <p className="px-4 text-center text-sm text-ivory">
-          Reality check — you have been seated more than 45 minutes.
-        </p>
+        <div className="fixed inset-0 z-40 grid place-items-center bg-felt-deep/80 px-4">
+          <div className="w-full max-w-sm rounded-[var(--radius-xl)] border border-border bg-felt-mid p-5">
+            <p className="text-[0.7rem] uppercase tracking-[0.16em] text-muted">Reality check</p>
+            <h2 className="mt-2 font-display text-2xl text-ivory">Still here?</h2>
+            <p className="mt-2 text-sm leading-relaxed text-muted">
+              You have been seated more than 45 minutes. The next deal is locked
+              until you confirm. Play chips only.
+            </p>
+            <Button className="mt-5 w-full" onClick={() => ackReality()}>
+              Still playing
+            </Button>
+          </div>
+        </div>
       )}
 
       <main className="relative mx-auto flex w-full max-w-5xl flex-1 flex-col justify-between gap-4 px-3 py-4 sm:px-6">

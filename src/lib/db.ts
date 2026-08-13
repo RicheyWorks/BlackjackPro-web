@@ -44,6 +44,7 @@ export interface Sql {
  */
 const globalRef = globalThis as typeof globalThis & {
   __pgSqlPromise__?: Promise<Sql>;
+  __pgPool__?: import("pg").Pool;
   __pgliteInstance__?: Promise<import("@electric-sql/pglite").PGlite>;
   __pgliteMigrateChain__?: Promise<void>;
 };
@@ -92,6 +93,7 @@ function createNeonSql(): Promise<Sql> {
     types.setTypeParser(OID_DATE, identity);
     types.setTypeParser(OID_INTERVAL, identity);
     const pool = new Pool({ connectionString: databaseUrl });
+    globalRef.__pgPool__ = pool;
     return toSql(async <T>(text: string, params: unknown[]) => {
       const res = await pool.query(text, params);
       return res.rows as T[];
@@ -192,6 +194,49 @@ export function getSql(): Promise<Sql> {
     throw err;
   });
   return sqlPromise;
+}
+
+/**
+ * Run `fn` on a single connection with BEGIN/COMMIT. Neon pooled queries
+ * otherwise hop connections and cannot share a transaction.
+ */
+export async function withTransaction<T>(fn: (sql: Sql) => Promise<T>): Promise<T> {
+  if (typeof window !== "undefined") {
+    throw new Error("withTransaction is server-only");
+  }
+  await getSql();
+  if (dbSource === "pglite") {
+    const pg = await getPglite();
+    return pg.transaction(async (tx) => {
+      const sql = toSql(async <R>(text: string, params: unknown[]) => {
+        const result = await tx.query<R>(text, params);
+        return result.rows;
+      });
+      return fn(sql);
+    }) as Promise<T>;
+  }
+  const pool = globalRef.__pgPool__;
+  if (!pool) throw new Error("Postgres pool is not ready");
+  const client = await pool.connect();
+  try {
+    await client.query("begin");
+    const sql = toSql(async <R>(text: string, params: unknown[]) => {
+      const res = await client.query(text, params);
+      return res.rows as R[];
+    });
+    const out = await fn(sql);
+    await client.query("commit");
+    return out;
+  } catch (err) {
+    try {
+      await client.query("rollback");
+    } catch {
+      /* ignore */
+    }
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
 /**

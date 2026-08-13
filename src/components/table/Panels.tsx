@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
@@ -7,6 +8,8 @@ import { CATALOG } from "@/lib/blackjack/achievements";
 import { dollars } from "@/lib/utils";
 import type { ThemeId } from "@/lib/blackjack/types";
 import { cn } from "@/lib/utils";
+import { fetchHands, fetchPitStats } from "@/lib/casino/api";
+import type { HandRow, PitStats } from "@/lib/casino/types";
 
 const THEMES: { id: ThemeId; name: string; note: string }[] = [
   { id: "midnight", name: "Midnight", note: "Ink forest · pirate rail" },
@@ -43,6 +46,7 @@ export function SettingsPanel({
   const lossLimit = useTable((s) => s.lossLimit);
   const seedCommit = useTable((s) => s.seedCommit);
   const seedReveal = useTable((s) => s.seedReveal);
+  const rulesPack = useTable((s) => s.rulesPack);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange} title="Table">
@@ -139,6 +143,7 @@ export function SettingsPanel({
               <p className="break-all font-mono text-[0.6rem] text-muted">
                 Shoe commit {seedCommit.slice(0, 16)}…
                 {seedReveal ? ` · last seed ${seedReveal.slice(0, 12)}…` : ""}
+                {rulesPack ? ` · ${rulesPack}` : ""}
               </p>
             )}
             <div className="flex flex-wrap gap-2">
@@ -189,9 +194,33 @@ export function StatsPanel({
   const snap = useTable((s) => s.snap);
   const achievements = useTable((s) => s.achievements);
   const plus3 = useTable((s) => s.plus3Stats);
+  const mode = useTable((s) => s.mode);
+  const rulesPack = useTable((s) => s.rulesPack);
+  const rulesHash = useTable((s) => s.rulesHash);
   const s = snap.stats;
   const net = s.totalReturned - s.totalWagered;
   const plus3Net = plus3.returned - plus3.wagered;
+  const [hands, setHands] = useState<HandRow[]>([]);
+  const [pit, setPit] = useState<PitStats | null>(null);
+
+  useEffect(() => {
+    if (!open || mode !== "pit") return;
+    let live = true;
+    void Promise.all([fetchHands(), fetchPitStats()])
+      .then(([h, st]) => {
+        if (!live) return;
+        setHands(h);
+        setPit(st);
+      })
+      .catch(() => {
+        if (!live) return;
+        setHands([]);
+        setPit(null);
+      });
+    return () => {
+      live = false;
+    };
+  }, [open, mode]);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange} title="Ledger">
@@ -212,6 +241,42 @@ export function StatsPanel({
         <Fact k="21+3 wins" v={String(plus3.wins)} />
         <Fact k="21+3 net" v={dollars(plus3Net)} />
       </dl>
+      {mode === "pit" && pit && (
+        <section className="mt-6">
+          <h3 className="mb-2 text-[0.7rem] uppercase tracking-[0.16em] text-muted">Pit</h3>
+          <dl className="grid grid-cols-2 gap-3">
+            <Fact k="Logged hands" v={String(pit.hands)} />
+            <Fact k="Last hour" v={String(pit.lastHourHands)} />
+            <Fact k="RTP" v={pit.rtp === null ? "—" : `${(pit.rtp * 100).toFixed(1)}%`} />
+            <Fact k="Voids" v={String(pit.voids)} />
+          </dl>
+          {(rulesPack || pit.rulesPack) && (
+            <p className="mt-3 break-all font-mono text-[0.6rem] leading-relaxed text-muted">
+              {rulesPack ?? pit.rulesPack}
+              {(rulesHash ?? pit.rulesHash) ? ` · ${(rulesHash ?? pit.rulesHash).slice(0, 12)}…` : ""}
+            </p>
+          )}
+        </section>
+      )}
+      {mode === "pit" && hands.length > 0 && (
+        <section className="mt-6">
+          <h3 className="mb-2 text-[0.7rem] uppercase tracking-[0.16em] text-muted">Hands</h3>
+          <ul className="space-y-2">
+            {hands.map((h) => (
+              <li key={h.id} className="rounded-[var(--radius-sm)] border border-border px-3 py-2">
+                <p className="flex justify-between gap-3 text-sm text-ivory">
+                  <span>{h.outcomes || h.status}</span>
+                  <span className="font-mono tabular-nums">{dollars(h.net)}</span>
+                </p>
+                <p className="mt-0.5 font-mono text-[0.6rem] text-muted">
+                  ${h.mainBet}
+                  {h.plus3Bet ? ` +21+3 $${h.plus3Bet}` : ""} · {h.rulesPack || h.rulesHash.slice(0, 8)}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       <h3 className="mt-6 mb-2 text-[0.7rem] uppercase tracking-[0.16em] text-muted">
         Marks
       </h3>

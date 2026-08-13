@@ -53,9 +53,12 @@ interface TableState {
   seedReveal: string | null;
   realityCheck: boolean;
   lossLimit: number;
+  rulesPack: string | null;
+  rulesHash: string | null;
   seat: () => void;
   openPit: () => Promise<void>;
   refillPit: () => void;
+  ackReality: () => void;
   setLossLimit: (amount: number) => void;
   cooloff: (hours: number) => void;
   selfExclude: (days: number) => void;
@@ -295,6 +298,8 @@ export const useTable = create<TableState>((set, get) => {
       seedReveal: view.seedReveal,
       realityCheck: view.realityCheck,
       lossLimit: view.lossLimit,
+      rulesPack: view.rulesPack,
+      rulesHash: view.rulesHash,
       pitBusy: false,
       ...extra,
     });
@@ -426,6 +431,8 @@ export const useTable = create<TableState>((set, get) => {
     seedReveal: null,
     realityCheck: false,
     lossLimit: 0,
+    rulesPack: null,
+    rulesHash: null,
 
     seat() {
       set({
@@ -452,6 +459,11 @@ export const useTable = create<TableState>((set, get) => {
     refillPit() {
       if (tableMode !== "pit") return;
       void runPit({ op: "refill" });
+    },
+
+    ackReality() {
+      if (tableMode !== "pit") return;
+      void runPit({ op: "ackReality" });
     },
 
     setLossLimit(amount) {

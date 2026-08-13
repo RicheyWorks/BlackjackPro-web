@@ -22,6 +22,7 @@ const OPS = new Set([
   "setLossLimit",
   "cooloff",
   "selfExclude",
+  "ackReality",
 ]);
 
 export function parseOp(raw: unknown): PitOp {

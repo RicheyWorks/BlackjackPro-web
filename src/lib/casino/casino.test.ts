@@ -8,6 +8,11 @@ import { parseOp } from "./parse";
 import { applyOp } from "./apply";
 import { dumpSession, parseBlob, type PitSession } from "./session";
 import { buildShuffledShoe, commitSeed, hmacIndex, newSeed } from "./rng.server";
+import { needsRealityAck } from "./reality";
+import { assertRate, _resetRateForTests } from "./rate";
+import { REALITY_MS } from "./types";
+import { rulesFingerprint } from "@/lib/blackjack/rules";
+import { DEFAULT_RULES } from "@/lib/blackjack/types";
 import type { Card, Rank, Suit } from "@/lib/blackjack/types";
 
 function session(bank = 1000): PitSession {
@@ -31,6 +36,7 @@ function session(bank = 1000): PitSession {
     version: 1,
     sessionAnchor: bank,
     sessionStartedAt: Date.now(),
+    lastRealityAckAt: Date.now(),
   };
 }
 
@@ -129,3 +135,32 @@ describe("casino apply", () => {
     assert.equal(restored!.engine.canHit, true);
   });
 });
+
+describe("casino phase 2", () => {
+  it("needs a reality ack after 45 minutes", () => {
+    const start = 1_000_000;
+    assert.equal(needsRealityAck(start, start, start + REALITY_MS - 1), false);
+    assert.equal(needsRealityAck(start, start, start + REALITY_MS), true);
+    assert.equal(needsRealityAck(start, start + REALITY_MS, start + REALITY_MS + 10), false);
+  });
+
+  it("fingerprints S17 and H17 as different packs", () => {
+    const s17 = rulesFingerprint(DEFAULT_RULES);
+    const h17 = rulesFingerprint({ ...DEFAULT_RULES, dealerHitsSoft17: true });
+    assert.match(s17, /S17/);
+    assert.match(h17, /H17/);
+    assert.notEqual(s17, h17);
+  });
+
+  it("rate-limits a burst", () => {
+    _resetRateForTests();
+    for (let i = 0; i < 8; i++) assertRate("u", "hit");
+    assert.throws(() => assertRate("u", "hit"), /Slow down/);
+    assertRate("u", "sync");
+  });
+
+  it("parses ackReality", () => {
+    assert.equal(parseOp({ op: "ackReality" }).op, "ackReality");
+  });
+});
+

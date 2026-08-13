@@ -12,12 +12,16 @@ smaller piece.
 | Layer | Who does it | Status here |
 | --- | --- | --- |
 | Game math (H17/S17, peek, 3:2, 21+3, splits) | Us | Done — `src/lib/blackjack` |
-| Server-authoritative table | Us | **Phase 1 — building now** |
-| Append-only chip ledger | Us | Phase 1 |
-| Hole card not sent to the client | Us | Phase 1 |
+| Server-authoritative table | Us | Phase 1 done |
+| Append-only chip ledger | Us | Phase 1 done |
+| Hole card not sent to the client | Us | Phase 1 done |
 | Commit–reveal shoe seed | Us | Phase 1 (play chips) |
 | Age attestation + RG rails (limits, cool-off, self-exclude) | Us | Phase 1 stubs |
-| Hand history / action log | Us | Phase 1 |
+| Hand history / action log | Us | Phase 1–2 |
+| Reality-check ack | Us | **Phase 2** |
+| Rules hash on every hand | Us | **Phase 2** |
+| Single-connection DB transactions | Us | **Phase 2** |
+| In-process rate limit | Us | **Phase 2** |
 | Certified RNG (GLI-19 / BMM / eCOGRA) | Independent lab | Not started — swap the seeder when a lab says so |
 | License per market (MGA, UKGC, NJ DGE, AGCO, …) | Lawyers + regulator | Outside this repo |
 | KYC / AML / age verification vendor | Jumio, Onfido, … | Not started |
@@ -57,14 +61,14 @@ Signed-in visitors can open a **pit seat**:
 
 Practice mode stays. It never writes the pit ledger.
 
-### Phase 2 — Operator-ready play chips
+### Phase 2 — Operator-ready play chips (this pass)
 
-- Single-connection transactions on Neon (Phase 1 uses an optimistic version).
-- Reality-check ack before the next deal after 45 minutes.
-- Immutable rules hash stored on every hand.
-- Operator read-only views (RTP, hands/hour, void rate).
-- Replace Mulberry-free HMAC shuffle with whatever the test lab specifies.
-- Rate limits and device/session binding.
+- Ledger + table writes run in a **single-connection transaction**.
+- After 45 minutes the next deal is locked until the player taps **Still playing**.
+- Every hand stores the rules pack and its SHA-256 (`6D:pen0.75:S17:peek:…`).
+- Ledger panel shows pit RTP, hands/hour, and the last 20 hands.
+- Burst rate limit (8/sec, 80/min) on pit actions.
+- HMAC shoe shuffle is still play-chip grade — a lab will name the seeder later.
 
 ### Phase 3 — Real money (only after licenses)
 

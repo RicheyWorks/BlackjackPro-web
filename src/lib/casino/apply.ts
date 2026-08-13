@@ -197,6 +197,7 @@ export function applyOp(s: PitSession, op: PitOp, hooks: ApplyHooks): ApplyResul
     case "setLossLimit":
     case "cooloff":
     case "selfExclude":
+    case "ackReality":
       break;
   }
 

@@ -3,16 +3,25 @@ import { chooseCountBet } from "@/lib/blackjack/deviations";
 import { TABLE_MAX } from "@/lib/blackjack/money";
 import type { EngineSnapshot } from "@/lib/blackjack/types";
 import { redactDealer } from "./redact";
-import { REALITY_MS, type PitView } from "./types";
+import { type PitView } from "./types";
 import { rebetAffordable } from "./apply";
 import type { PitSession } from "./session";
+import { needsRealityAck } from "./reality";
+import { rulesFingerprint } from "@/lib/blackjack/rules";
 
 export function toView(
   s: PitSession,
-  extra: { lossLimit: number; cooloffUntil: string | null; selfExcludedUntil: string | null },
+  extra: {
+    lossLimit: number;
+    cooloffUntil: string | null;
+    selfExcludedUntil: string | null;
+    rulesHash: string;
+  },
 ): PitView {
   const snap = s.engine.snapshot();
   const tc = s.counter.trueCount(snap.shoeRemaining);
+  const realityCheck = needsRealityAck(s.sessionStartedAt, s.lastRealityAckAt);
+  const pack = rulesFingerprint(s.engine.rules);
   return {
     mode: "pit",
     licensed: false,
@@ -31,7 +40,7 @@ export function toView(
     shoeDealt: snap.shoeDealt,
     shoeDecks: snap.shoeDecks,
     needsShuffle: snap.needsShuffle,
-    canDeal: snap.canDeal,
+    canDeal: snap.canDeal && !realityCheck,
     canHit: snap.canHit,
     canStand: snap.canStand,
     canDouble: snap.canDouble,
@@ -43,7 +52,7 @@ export function toView(
     plus3Last: s.plus3Last,
     lastMainBet: s.lastMainBet,
     lastPlus3Bet: s.lastPlus3Bet,
-    canRebet: rebetAffordable(s),
+    canRebet: rebetAffordable(s) && !realityCheck,
     running: s.counter.running,
     trueCount: tc,
     countStake: chooseCountBet(tc, snap.bankroll, snap.pendingBet),
@@ -56,7 +65,9 @@ export function toView(
     lossLimit: extra.lossLimit,
     cooloffUntil: extra.cooloffUntil,
     selfExcludedUntil: extra.selfExcludedUntil,
-    realityCheck: Date.now() - s.sessionStartedAt >= REALITY_MS,
+    realityCheck,
+    rulesPack: pack,
+    rulesHash: extra.rulesHash,
     seated: true,
   };
 }

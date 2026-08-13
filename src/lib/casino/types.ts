@@ -23,7 +23,8 @@ export type PitOp =
   | { op: "newSession" }
   | { op: "setLossLimit"; amount: number }
   | { op: "cooloff"; hours: number }
-  | { op: "selfExclude"; days: number };
+  | { op: "selfExclude"; days: number }
+  | { op: "ackReality" };
 
 export type LedgerKind =
   | "grant"
@@ -80,6 +81,8 @@ export interface PitView {
   cooloffUntil: string | null;
   selfExcludedUntil: string | null;
   realityCheck: boolean;
+  rulesPack: string;
+  rulesHash: string;
   seated: true;
 }
 
@@ -93,7 +96,21 @@ export interface HandRow {
   outcomes: string;
   seedCommit: string;
   seedReveal: string | null;
+  rulesHash: string;
+  rulesPack: string;
   status: string;
+}
+
+export interface PitStats {
+  hands: number;
+  wagered: number;
+  returned: number;
+  net: number;
+  rtp: number | null;
+  voids: number;
+  lastHourHands: number;
+  rulesPack: string;
+  rulesHash: string;
 }
 
 export const PLAY_GRANT = 1000;

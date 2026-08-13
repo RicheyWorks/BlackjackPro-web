@@ -35,6 +35,7 @@ export interface PitSession {
   version: number;
   sessionAnchor: number;
   sessionStartedAt: number;
+  lastRealityAckAt: number;
 }
 
 export interface PitBlob {
@@ -60,6 +61,7 @@ export interface PitBlob {
   seen: number[];
   sessionAnchor: number;
   sessionStartedAt: number;
+  lastRealityAckAt: number;
 }
 
 function parsePlus3Last(raw: unknown): Plus3Result | null {
@@ -105,6 +107,7 @@ export function dumpSession(s: PitSession): PitBlob {
     seen: [...s.seen],
     sessionAnchor: s.sessionAnchor,
     sessionStartedAt: s.sessionStartedAt,
+    lastRealityAckAt: s.lastRealityAckAt,
   };
 }
 
@@ -155,6 +158,7 @@ export function parseBlob(raw: string, bankroll: number, version: number): PitSe
       version,
       sessionAnchor: asInt(o.sessionAnchor, bankroll),
       sessionStartedAt: typeof o.sessionStartedAt === "number" ? o.sessionStartedAt : Date.now(),
+      lastRealityAckAt: typeof o.lastRealityAckAt === "number" ? o.lastRealityAckAt : 0,
     };
   } catch {
     return null;

@@ -55,6 +55,8 @@ interface TableState {
   lastSeedCommit: string | null;
   seedOk: boolean;
   realityCheck: boolean;
+  sessionStartedAt: number;
+  sessionNet: number;
   lossLimit: number;
   rulesPack: string | null;
   rulesHash: string | null;
@@ -303,6 +305,8 @@ export const useTable = create<TableState>((set, get) => {
       lastSeedCommit: view.lastSeedCommit,
       seedOk: view.seedOk,
       realityCheck: view.realityCheck,
+      sessionStartedAt: view.sessionStartedAt,
+      sessionNet: view.sessionNet,
       lossLimit: view.lossLimit,
       rulesPack: view.rulesPack,
       rulesHash: view.rulesHash,
@@ -439,6 +443,8 @@ export const useTable = create<TableState>((set, get) => {
     lastSeedCommit: null,
     seedOk: true,
     realityCheck: false,
+    sessionStartedAt: 0,
+    sessionNet: 0,
     lossLimit: 0,
     rulesPack: null,
     rulesHash: null,

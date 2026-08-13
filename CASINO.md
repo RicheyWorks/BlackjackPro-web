@@ -71,6 +71,7 @@ Practice mode stays. It never writes the pit ledger.
 - Retired shoe: last seed + last commit, checked on the server (`seedOk`).
 - Ledger replay of settled hands (hole stays redacted while the box is open).
 - Cash tape (grant / wager / payout) plus the action strip on each hand.
+- Seat clock, reality check with time / hands / net, copy-proof on a settled hand.
 - Pit seat bound to the browser that opened it.
 - HMAC shoe shuffle is still play-chip grade — a lab will name the seeder later.
 

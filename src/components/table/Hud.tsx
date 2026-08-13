@@ -1,8 +1,10 @@
+import { useEffect, useState } from "react";
 import { dollars } from "@/lib/utils";
 import { useTable } from "@/store/table";
 import { UserButton, SignedIn, SignedOut } from "@/lib/auth/gates";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { Link } from "@tanstack/react-router";
+import { formatSeated } from "@/lib/casino/reality";
 
 export function Hud({
   onOpenSettings,
@@ -21,8 +23,17 @@ export function Hud({
   const mode = useTable((s) => s.mode);
   const plus3Pending = useTable((s) => s.plus3Pending);
   const pitBusy = useTable((s) => s.pitBusy);
+  const sessionStartedAt = useTable((s) => s.sessionStartedAt);
+  const sessionNet = useTable((s) => s.sessionNet);
   const { user, isPending } = useCurrentUserState();
   const tray = snap.bankroll + snap.pendingBet + plus3Pending;
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (mode !== "pit" || !sessionStartedAt) return;
+    const t = window.setInterval(() => setNow(Date.now()), 15_000);
+    return () => window.clearInterval(t);
+  }, [mode, sessionStartedAt]);
 
   return (
     <header className="flex flex-wrap items-start justify-between gap-3 px-4 pt-4 sm:px-6">
@@ -37,6 +48,13 @@ export function Hud({
 
       <div className="flex flex-wrap items-center justify-end gap-2">
         <Stat label="Bank" value={dollars(tray)} hint={snap.pendingBet > 0 ? `box ${dollars(snap.pendingBet)}` : undefined} />
+        {mode === "pit" && sessionStartedAt > 0 && (
+          <Stat
+            label="Seat"
+            value={formatSeated(now - sessionStartedAt)}
+            hint={sessionNet === 0 ? "even" : `${sessionNet > 0 ? "+" : ""}${dollars(sessionNet)}`}
+          />
+        )}
         <Stat
           label="Shoe"
           value={`${snap.shoeRemaining}`}

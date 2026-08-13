@@ -84,6 +84,8 @@ export interface PitView {
   cooloffUntil: string | null;
   selfExcludedUntil: string | null;
   realityCheck: boolean;
+  sessionStartedAt: number;
+  sessionNet: number;
   rulesPack: string;
   rulesHash: string;
   seated: true;

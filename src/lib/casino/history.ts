@@ -64,3 +64,25 @@ export function groupActions(
   }
   return map;
 }
+
+export function handProof(hand: {
+  id: string;
+  rulesPack: string;
+  rulesHash: string;
+  seedCommit: string;
+  seedReveal: string | null;
+  outcomes: string;
+  wagered: number;
+  returned: number;
+  net: number;
+}): string {
+  return [
+    `Blackjack Pro play-chip hand ${hand.id}`,
+    `rules ${hand.rulesPack}`,
+    `hash ${hand.rulesHash}`,
+    `commit ${hand.seedCommit}`,
+    hand.seedReveal ? `reveal ${hand.seedReveal}` : "reveal pending (shoe still live)",
+    `outcomes ${hand.outcomes || "—"}`,
+    `wagered ${hand.wagered} returned ${hand.returned} net ${hand.net}`,
+  ].join("\n");
+}

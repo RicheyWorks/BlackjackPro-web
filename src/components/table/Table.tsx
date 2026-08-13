@@ -12,6 +12,7 @@ import { SettingsPanel, StatsPanel } from "./Panels";
 import { Tape } from "./Tape";
 import { ShoeTray } from "./ShoeTray";
 import { Button } from "@/components/ui/button";
+import { formatSeated } from "@/lib/casino/reality";
 
 export function Table() {
   const seated = useTable((s) => s.seated);
@@ -21,6 +22,8 @@ export function Table() {
   const pitBusy = useTable((s) => s.pitBusy);
   const realityCheck = useTable((s) => s.realityCheck);
   const ackReality = useTable((s) => s.ackReality);
+  const sessionStartedAt = useTable((s) => s.sessionStartedAt);
+  const sessionNet = useTable((s) => s.sessionNet);
   const snap = useTable((s) => s.snap);
   const theme = useTable((s) => s.theme);
   const toast = useTable((s) => s.toast);
@@ -186,8 +189,12 @@ export function Table() {
             <p className="text-[0.7rem] uppercase tracking-[0.16em] text-muted">Reality check</p>
             <h2 id="reality-title" className="mt-2 font-display text-2xl text-ivory">Still here?</h2>
             <p className="mt-2 text-sm leading-relaxed text-muted">
-              You have been seated more than 45 minutes. The next deal is locked
-              until you confirm. Play chips only.
+              Seated {sessionStartedAt ? formatSeated(Date.now() - sessionStartedAt) : "a while"}
+              {" · "}
+              {snap.stats.hands} hands
+              {" · "}
+              {sessionNet === 0 ? "even" : `${sessionNet > 0 ? "+" : ""}${dollars(sessionNet)}`}
+              . Next deal is locked until you confirm. Play chips only.
             </p>
             <Button className="mt-5 w-full" onClick={() => ackReality()}>
               Still playing

@@ -5,13 +5,13 @@ import { createRules } from "@/lib/blackjack/rules";
 import { HiLoCounter } from "@/lib/blackjack/hilo";
 import { redactDealer } from "./redact";
 import { settlePlus3 } from "@/lib/blackjack/plus3";
-import { parseDealerJson, parseHandsJson, groupActions, sanitizeAction } from "./history";
+import { parseDealerJson, parseHandsJson, groupActions, sanitizeAction, handProof } from "./history";
 import { parseDevice, parseOp } from "./parse";
 import { applyOp } from "./apply";
 import { dumpSession, parseBlob, type PitSession } from "./session";
 import { buildShuffledShoe, commitSeed, hmacIndex, newSeed } from "./rng.server";
 import { nextAutoStep } from "@/lib/blackjack/autoplay";
-import { needsRealityAck } from "./reality";
+import { needsRealityAck, formatSeated } from "./reality";
 import { assertRate, _resetRateForTests } from "./rate";
 import { REALITY_MS } from "./types";
 import { rulesFingerprint } from "@/lib/blackjack/rules";
@@ -146,6 +146,12 @@ describe("casino phase 2", () => {
     assert.equal(needsRealityAck(start, start, start + REALITY_MS - 1), false);
     assert.equal(needsRealityAck(start, start, start + REALITY_MS), true);
     assert.equal(needsRealityAck(start, start + REALITY_MS, start + REALITY_MS + 10), false);
+  });
+
+  it("formats seat time", () => {
+    assert.equal(formatSeated(0), "0m");
+    assert.equal(formatSeated(12 * 60_000), "12m");
+    assert.equal(formatSeated(90 * 60_000), "1h 30m");
   });
 
   it("fingerprints S17 and H17 as different packs", () => {
@@ -290,6 +296,23 @@ describe("casino phase 2", () => {
       { hand_id: null, action: "stand" },
     ]);
     assert.deepEqual(map.get("a"), ["deal", "hit"]);
+  });
+
+  it("prints a hand proof without the live seed", () => {
+    const text = handProof({
+      id: "abc",
+      rulesPack: "6D S17",
+      rulesHash: "deadbeef",
+      seedCommit: "aa".repeat(32),
+      seedReveal: null,
+      outcomes: "WIN",
+      wagered: 25,
+      returned: 50,
+      net: 25,
+    });
+    assert.match(text, /commit/);
+    assert.match(text, /reveal pending/);
+    assert.doesNotMatch(text, /live seed/);
   });
 });
 

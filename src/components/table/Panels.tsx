@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { fetchHands, fetchPitStats, fetchWallet } from "@/lib/casino/api";
 import type { HandRow, LedgerRow, PitStats } from "@/lib/casino/types";
 import { TABLE_MIN } from "@/lib/blackjack/money";
+import { handProof } from "@/lib/casino/history";
 import { PlayingCard } from "./PlayingCard";
 import { handLabel } from "@/lib/blackjack/hand";
 
@@ -402,6 +403,15 @@ function HandReplay({ hand }: { hand: HandRow }) {
           ? ` · shoe ${hand.seedOk ? "checks out" : "does not match"}`
           : " · seed hidden until this shoe is cut"}
       </p>
+      <button
+        type="button"
+        className="h-11 rounded-[var(--radius-sm)] border border-border px-3 text-xs uppercase tracking-[0.14em] text-muted hover:bg-fg/6"
+        onClick={() => {
+          void navigator.clipboard?.writeText(handProof(hand));
+        }}
+      >
+        Copy proof
+      </button>
     </div>
   );
 }

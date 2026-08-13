@@ -7,6 +7,7 @@ import { type PitView } from "./types";
 import { rebetAffordable } from "./apply";
 import type { PitSession } from "./session";
 import { needsRealityAck } from "./reality";
+import { liveInPlay } from "@/lib/blackjack/persist";
 import { rulesFingerprint } from "@/lib/blackjack/rules";
 
 export function toView(
@@ -71,6 +72,13 @@ export function toView(
     cooloffUntil: extra.cooloffUntil,
     selfExcludedUntil: extra.selfExcludedUntil,
     realityCheck,
+    sessionStartedAt: s.sessionStartedAt,
+    sessionNet:
+      s.engine.bankroll +
+      s.engine.pendingBet +
+      s.plus3Pending +
+      liveInPlay(s.engine.phase, s.engine.insuranceBet, s.engine.player) -
+      s.sessionAnchor,
     rulesPack: pack,
     rulesHash: extra.rulesHash,
     seated: true,

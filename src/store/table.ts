@@ -86,19 +86,67 @@ function persist(): void {
     pendingBet: engine.phase === "BETTING" ? engine.pendingBet : 0,
     plus3Pending: engine.phase === "BETTING" ? plus3Pending : 0,
     inPlay: liveInPlay(engine.phase, engine.insuranceBet, engine.player),
+    live: engine.captureLive(plus3Last, {
+      running: counter.running,
+      seenLow: counter.seenLow,
+      seenMid: counter.seenMid,
+      seenHigh: counter.seenHigh,
+      seen: [...seen],
+    }),
     plus3: { ...settings.plus3 },
     tape: settings.tape,
   });
 }
 
+function applyCount(live: { running: number; seenLow: number; seenMid: number; seenHigh: number; seen: number[] }): void {
+  counter.running = live.running;
+  counter.seenLow = live.seenLow;
+  counter.seenMid = live.seenMid;
+  counter.seenHigh = live.seenHigh;
+  seen.clear();
+  for (const id of live.seen) seen.add(id);
+}
+
+function freezeVisibleWithoutCounting(): void {
+  const snap = engine.snapshot();
+  const hideHole = snap.phase === "PLAYER" || snap.phase === "INSURANCE";
+  counter.reset();
+  seen.clear();
+  const mark = (card?: { id: number }) => {
+    if (card) seen.add(card.id);
+  };
+  for (const hand of snap.hands) {
+    for (const card of hand.cards) mark(card);
+  }
+  if (hideHole) mark(snap.dealer.cards[0]);
+  else for (const card of snap.dealer.cards) mark(card);
+}
+
+function noteAfterDraw(): void {
+  if (engine.shoe.consumeMidRoundShuffle()) freezeVisibleWithoutCounting();
+}
+
 function applySave(save: SaveData): void {
   settings = save;
+  plus3Last = null;
+  plus3Pending = 0;
+  if (
+    save.live &&
+    (save.live.phase === "PLAYER" || save.live.phase === "INSURANCE")
+  ) {
+    engine = new Engine(save.bankroll, createRules({ dealerHitsSoft17: save.dealerHitsSoft17 }));
+    engine.stats = { ...save.stats };
+    engine.stats.peakBankroll = Math.max(engine.stats.peakBankroll, engine.bankroll);
+    if (engine.restoreLive(save.live)) {
+      plus3Last = save.live.plus3Last;
+      applyCount(save.live.count);
+      return;
+    }
+  }
   const restored = restoreCash(save);
   engine = new Engine(restored.bankroll, createRules({ dealerHitsSoft17: save.dealerHitsSoft17 }));
   engine.stats = { ...restored.stats };
   engine.stats.peakBankroll = Math.max(engine.stats.peakBankroll, engine.bankroll);
-  plus3Pending = 0;
-  plus3Last = null;
   if (restored.pendingBet > 0 && restored.pendingBet <= engine.bankroll) {
     engine.pendingBet = restored.pendingBet;
     engine.bankroll -= restored.pendingBet;
@@ -273,7 +321,7 @@ export const useTable = create<TableState>((set, get) => {
     hints: settings.hints,
     showCount: settings.showCount,
     soft17: settings.dealerHitsSoft17,
-    seated: false,
+    seated: engine.phase === "PLAYER" || engine.phase === "INSURANCE",
     running: 0,
     trueCount: 0,
     chatter: null,
@@ -383,6 +431,7 @@ export const useTable = create<TableState>((set, get) => {
       }
       const side = plus3Pending;
       engine.deal();
+      noteAfterDraw();
       settings.lastMainBet = main;
       settings.lastPlus3Bet = side;
       resolvePlus3();
@@ -409,6 +458,7 @@ export const useTable = create<TableState>((set, get) => {
       fromUser();
       if (!engine.canHit) return;
       engine.hit();
+      noteAfterDraw();
       const snap = engine.snapshot();
       noteVisible(snap);
       if (settings.sound) sfx.hit();
@@ -421,6 +471,7 @@ export const useTable = create<TableState>((set, get) => {
       fromUser();
       if (!engine.canStand) return;
       engine.stand();
+      noteAfterDraw();
       const snap = engine.snapshot();
       noteVisible(snap);
       say(lineFor(settings.theme, "stand"));
@@ -432,6 +483,7 @@ export const useTable = create<TableState>((set, get) => {
       fromUser();
       if (!engine.canDouble) return;
       engine.doubleDown();
+      noteAfterDraw();
       const snap = engine.snapshot();
       noteVisible(snap);
       if (settings.sound) sfx.chip();
@@ -444,6 +496,7 @@ export const useTable = create<TableState>((set, get) => {
       fromUser();
       if (!engine.canSplit) return;
       engine.split();
+      noteAfterDraw();
       const snap = engine.snapshot();
       noteVisible(snap);
       say(lineFor(settings.theme, "split"));
@@ -466,6 +519,7 @@ export const useTable = create<TableState>((set, get) => {
       if (yes && !natural && !engine.canInsure) return;
       const premium = yes && !natural ? Math.floor(engine.player[0]!.bet / 2) : 0;
       engine.takeInsurance(yes);
+      noteAfterDraw();
       const snap = engine.snapshot();
       noteVisible(snap);
       const paid = yes && !natural && snap.lastOutcomes.length > 0 && handValue(snap.dealer.cards) === 21;

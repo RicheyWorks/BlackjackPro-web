@@ -41,10 +41,10 @@ export function nextAutoStep(s: AutoView): AutoStep {
   }
 
   if (s.phase === "BETTING") {
-    if (s.canDeal) return { kind: "deal" };
     if (s.countStake > s.pendingBet && s.bankroll >= s.countStake - s.pendingBet) {
       return { kind: "countBet" };
     }
+    if (s.canDeal) return { kind: "deal" };
     if (s.bankroll <= 0 && s.pendingBet <= 0) return { kind: "stop" };
     return { kind: "wait" };
   }

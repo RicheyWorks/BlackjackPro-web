@@ -17,6 +17,9 @@ import {
 } from "./rules";
 import { Shoe } from "./shoe";
 import { clampMoney, isChipAmount, TABLE_MAX, TABLE_MIN } from "./money";
+import { snapshotLive, type LiveRound } from "./live";
+import type { Plus3Result } from "./plus3";
+import type { LiveCount } from "./live";
 
 export class Engine {
   readonly rules: Rules;
@@ -36,7 +39,7 @@ export class Engine {
 
   constructor(startingBankroll: number, rules: Rules = DEFAULT_RULES) {
     this.rules = { ...rules };
-    this.bankroll = Math.max(0, startingBankroll);
+    this.bankroll = clampMoney(startingBankroll);
     this.shoe = new Shoe(this.rules.decks, this.rules.penetration);
     this.stats = { ...EMPTY_STATS, peakBankroll: this.bankroll };
   }
@@ -136,6 +139,8 @@ export class Engine {
 
   abandonRound(): void {
     this.creditBankrollOnly(this.pendingBet);
+    this.creditBankrollOnly(this.insuranceBet);
+    for (const h of this.player) this.creditBankrollOnly(h.bet);
     this.pendingBet = 0;
     this.player = [emptyHand()];
     this.dealer = emptyHand();
@@ -405,21 +410,52 @@ export class Engine {
 
   private recordWager(amount: number): void {
     if (amount <= 0) return;
-    this.stats.totalWagered += amount;
+    this.stats.totalWagered = clampMoney(this.stats.totalWagered + amount);
     this.roundWagered += amount;
   }
 
   private creditBankrollOnly(amount: number): void {
     if (amount <= 0) return;
-    this.bankroll += amount;
+    this.bankroll = clampMoney(this.bankroll + amount);
     this.stats.peakBankroll = Math.max(this.stats.peakBankroll, this.bankroll);
   }
 
   private credit(amount: number): void {
     if (amount <= 0) return;
     this.creditBankrollOnly(amount);
-    this.stats.totalReturned += amount;
+    this.stats.totalReturned = clampMoney(this.stats.totalReturned + amount);
     this.roundReturned += amount;
+  }
+
+  captureLive(plus3Last: Plus3Result | null, count: LiveCount): LiveRound | null {
+    return snapshotLive(
+      this.phase,
+      this.activeHand,
+      this.insuranceBet,
+      this.dealer,
+      this.player,
+      this.shoe.snapshot(),
+      this.roundWagered,
+      this.roundReturned,
+      plus3Last,
+      count,
+    );
+  }
+
+  restoreLive(live: LiveRound): boolean {
+    if (live.phase !== "PLAYER" && live.phase !== "INSURANCE") return false;
+    if (!this.shoe.load(live.shoe)) return false;
+    this.phase = live.phase;
+    this.activeHand = Math.min(live.activeHand, live.hands.length - 1);
+    this.insuranceBet = live.insuranceBet;
+    this.pendingBet = 0;
+    this.dealer = { ...live.dealer, cards: [...live.dealer.cards] };
+    this.player = live.hands.map((h) => ({ ...h, cards: [...h.cards] }));
+    this.roundWagered = live.roundWagered;
+    this.roundReturned = live.roundReturned;
+    this.lastOutcomes = [];
+    this.lastNet = 0;
+    return true;
   }
 
   snapshot(): EngineSnapshot {

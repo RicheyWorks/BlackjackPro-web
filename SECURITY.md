@@ -6,7 +6,8 @@ Offline casino game. No real-money ledger. Still treated as money-shaped state.
 
 - Integer chips only. `NaN` / `Infinity` / fractions rejected at `canBet`.
 - Table box `$5–$500`. Bankroll and every persisted figure capped at `$1,000,000`.
-- Mid-hand refresh folds `inPlay` back into cash and rewinds that hand on the ledger.
+- Mid-hand refresh restores the live table (cards, shoe, count). A missing or
+  poisoned snapshot falls back to folding `inPlay` back into cash.
 - Poisoned pending + side bets that exceed cash are dropped, not minted.
 - 21+3 cannot exceed the main stake or the table max.
 

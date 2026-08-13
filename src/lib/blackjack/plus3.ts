@@ -66,7 +66,7 @@ function isStraight(a: Card, b: Card, c: Card): boolean {
 
 /** Total returned to the player (0 = lost). Includes the stake on a win. */
 export function plus3Payout(kind: Plus3Kind | null, bet: number): number {
-  if (!kind || bet <= 0) return 0;
+  if (!kind || !Number.isSafeInteger(bet) || bet <= 0) return 0;
   return bet + bet * PLUS3_PAY[kind];
 }
 

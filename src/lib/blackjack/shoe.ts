@@ -1,5 +1,7 @@
 import type { Card, Rank, Suit } from "./types";
 import { RANKS, SUITS } from "./types";
+import type { LiveShoe } from "./live";
+import { parseCard } from "./live";
 
 export const MIN_CARDS_FOR_ROUND = 40;
 
@@ -18,6 +20,7 @@ export class Shoe {
   private cards: Card[] = [];
   private cutIndex = 0;
   private nextId = 1;
+  private midRoundShuffle = false;
 
   constructor(decks = 6, penetration = 0.75) {
     if (decks < 1) throw new Error("decks must be >= 1");
@@ -47,8 +50,18 @@ export class Shoe {
   }
 
   deal(): Card {
-    if (this.cards.length === 0) this.reshuffle();
+    if (this.cards.length === 0) {
+      this.reshuffle();
+      this.midRoundShuffle = true;
+    }
     return this.cards.pop()!;
+  }
+
+  /** True once if the shoe emptied mid-round and was rebuilt. */
+  consumeMidRoundShuffle(): boolean {
+    const hit = this.midRoundShuffle;
+    this.midRoundShuffle = false;
+    return hit;
   }
 
   remaining(): number {
@@ -57,5 +70,28 @@ export class Shoe {
 
   dealt(): number {
     return this.decks * 52 - this.cards.length;
+  }
+
+  snapshot(): LiveShoe {
+    return {
+      cards: this.cards.map((c) => ({ ...c })),
+      cutIndex: this.cutIndex,
+      nextId: this.nextId,
+    };
+  }
+
+  load(data: LiveShoe): boolean {
+    if (data.cards.length > this.decks * 52) return false;
+    const cards: Card[] = [];
+    for (const raw of data.cards) {
+      const c = parseCard(raw);
+      if (!c) return false;
+      cards.push(c);
+    }
+    this.cards = cards;
+    this.cutIndex = Math.max(0, Math.min(data.cutIndex, this.decks * 52));
+    this.nextId = Math.max(1, data.nextId);
+    this.midRoundShuffle = false;
+    return true;
   }
 }

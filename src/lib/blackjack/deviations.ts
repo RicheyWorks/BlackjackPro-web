@@ -81,9 +81,9 @@ export function illustrious18(
   }
 
   if (!isSoft(cards) && !pairTens) {
-    if (total === 16 && up === 10 && !allowS && tcFloor >= 0) return "STAND";
-    if (total === 15 && up === 10 && !allowS && tcFloor >= 4) return "STAND";
-    if (total === 16 && up === 9 && !allowS && tcFloor >= 5) return "STAND";
+    if (total === 16 && up === 10 && tcFloor >= 0 && !(allowS && two)) return "STAND";
+    if (total === 15 && up === 10 && tcFloor >= 4 && !(allowS && two)) return "STAND";
+    if (total === 16 && up === 9 && tcFloor >= 5 && !(allowS && two)) return "STAND";
     if (total === 12 && up === 3 && tcFloor >= 2) return "STAND";
     if (total === 12 && up === 2 && tcFloor >= 3) return "STAND";
     if (total === 13 && up === 2 && tcFloor <= -2) return "HIT";

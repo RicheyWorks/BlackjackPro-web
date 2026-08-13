@@ -3,6 +3,7 @@ import { STARTING_BANKROLL } from "./types";
 import { sanitizeTape, type TapeMark } from "./tape";
 import { asInt, clampMoney, MAX_MONEY, TABLE_MAX } from "./money";
 import { CATALOG } from "./achievements";
+import { parseLive, type LiveRound } from "./live";
 
 const KEY = "blackjack-pro-v1";
 const THEMES: ThemeId[] = ["midnight", "abyss", "crimson", "glacier", "classic"];
@@ -28,8 +29,10 @@ export interface SaveData {
   lastPlus3Bet: number;
   pendingBet: number;
   plus3Pending: number;
-  /** Live hand + insurance while a round is open. Folded back into cash on load. */
+  /** Live hand + insurance while a round is open. Fallback if `live` is corrupt. */
   inPlay: number;
+  /** Full mid-hand table. When present and valid, resume instead of refunding. */
+  live: LiveRound | null;
   plus3: Plus3Save;
   tape: TapeMark[];
   achievements: string[];
@@ -64,6 +67,7 @@ export function defaultSave(): SaveData {
     pendingBet: 0,
     plus3Pending: 0,
     inPlay: 0,
+    live: null,
     plus3: { wagered: 0, returned: 0, wins: 0 },
     tape: [],
     achievements: [],
@@ -123,7 +127,7 @@ export function loadSave(): SaveData {
   if (!storage) return defaultSave();
   try {
     const raw = storage.getItem(KEY);
-    if (!raw || raw.length > 20_000) return defaultSave();
+    if (!raw || raw.length > 120_000) return defaultSave();
     const parsed = JSON.parse(raw, jsonReviver) as unknown;
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return defaultSave();
     const src = parsed as Record<string, unknown>;
@@ -145,6 +149,7 @@ export function loadSave(): SaveData {
       pendingBet: asInt(src.pendingBet, 0, TABLE_MAX),
       plus3Pending: asInt(src.plus3Pending, 0, TABLE_MAX),
       inPlay: asInt(src.inPlay, 0, TABLE_MAX * 8),
+      live: parseLive(src.live),
       plus3: {
         wagered: asInt(plus3In.wagered, 0),
         returned: asInt(plus3In.returned, 0),
@@ -190,6 +195,7 @@ export function writeSave(data: SaveData): void {
       pendingBet: clampMoney(data.pendingBet, TABLE_MAX),
       plus3Pending: clampMoney(data.plus3Pending, TABLE_MAX),
       inPlay: clampMoney(data.inPlay, TABLE_MAX * 8),
+      live: data.live ? parseLive(data.live) : null,
       plus3: {
         wagered: clampMoney(data.plus3.wagered),
         returned: clampMoney(data.plus3.returned),

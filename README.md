@@ -50,7 +50,7 @@ Insurance / even money at a floored TC of +3. Illustrious 18 + Fab 4 sit on top 
 
 ## Persistence
 
-Bankroll, tray, tape, achievements, and settings live in `localStorage`. Refresh mid-hand folds the live stake back into cash and drops that unfinished round from the ledger. Saves are allowlisted and capped — see [SECURITY.md](./SECURITY.md).
+Bankroll, tray, tape, achievements, settings, and a live hand live in `localStorage`. Refresh mid-hand **resumes the same cards and shoe** — it does not refund the box after you have seen them. A corrupt live snapshot falls back to folding the stake back into cash. Saves are allowlisted and capped — see [SECURITY.md](./SECURITY.md).
 
 ## Develop
 

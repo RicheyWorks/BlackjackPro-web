@@ -12,6 +12,7 @@ import { chooseCountBet, coachAdvice, takeInsuranceAt } from "./deviations";
 import { appendTape, sanitizeTape } from "./tape";
 import { loadSave, restoreCash, defaultSave } from "./persist";
 import { TABLE_MAX, TABLE_MIN } from "./money";
+import { parseLive } from "./live";
 import type { Card, Rank, Suit } from "./types";
 import { DEFAULT_RULES } from "./types";
 
@@ -684,5 +685,90 @@ describe("security persist", () => {
     assert.equal(({} as { polluted?: boolean }).polluted, undefined);
   });
 });
+
+describe("backend integrity", () => {
+  const up = (rank: Rank): Card => card(1, rank, "hearts");
+  const hand = (...ranks: Rank[]) => ({
+    cards: ranks.map((r, i) => card(i + 2, r)),
+    bet: 25,
+    doubled: false,
+    surrendered: false,
+    fromSplit: false,
+    splitAce: false,
+    stood: false,
+  });
+
+  it("clamps a NaN buy-in", () => {
+    const e = new Engine(Number.NaN);
+    assert.equal(e.bankroll, 0);
+  });
+
+  it("resumes a live hand instead of refunding the box", () => {
+    const e = new Engine(1000);
+    e.addBet(25);
+    stack(e, [["10"], ["10"], ["6"], ["9"]]);
+    e.deal();
+    assert.equal(e.phase, "PLAYER");
+    const cash = e.bankroll;
+    const live = e.captureLive(null, {
+      running: 2,
+      seenLow: 1,
+      seenMid: 0,
+      seenHigh: 2,
+      seen: e.player[0]!.cards.map((c) => c.id),
+    });
+    assert.ok(live);
+    const parsed = parseLive(JSON.parse(JSON.stringify(live)));
+    assert.ok(parsed);
+    const e2 = new Engine(cash);
+    e2.stats = { ...e.stats };
+    assert.equal(e2.restoreLive(parsed!), true);
+    assert.equal(e2.phase, "PLAYER");
+    assert.equal(e2.bankroll, cash);
+    assert.equal(e2.player[0]!.bet, 25);
+    assert.equal(e2.player[0]!.cards[0]!.rank, "10");
+    assert.equal(e2.canHit, true);
+    assert.equal(e2.bankroll + e2.player[0]!.bet, 1000);
+  });
+
+  it("rejects a poisoned live payload", () => {
+    assert.equal(parseLive({ phase: "PLAYER", hands: "nope" }), null);
+    assert.equal(parseLive({ phase: "BETTING" }), null);
+    assert.equal(parseLive({ __proto__: { phase: "PLAYER" } }), null);
+  });
+
+  it("ramps the count bet before dealing a short box", () => {
+    const step = nextAutoStep({
+      phase: "BETTING",
+      canDeal: true,
+      canInsure: false,
+      canEvenMoney: false,
+      pendingBet: 5,
+      bankroll: 995,
+      countStake: 40,
+      trueCount: 4,
+      canHit: false,
+      canStand: false,
+      canDouble: false,
+      canSplit: false,
+      canSurrender: false,
+      soft17: false,
+    });
+    assert.equal(step.kind, "countBet");
+  });
+
+  it("stands a multi-card 16 vs 10 at TC 0", () => {
+    const c = coachAdvice(hand("4", "5", "7"), up("10"), 0.4, { allowSurrender: true });
+    assert.equal(c.action, "STAND");
+    assert.equal(c.deviate, true);
+  });
+
+  it("still surrenders a two-card 16 vs 10 when late surrender is on", () => {
+    const c = coachAdvice(hand("10", "6"), up("10"), 4, { allowSurrender: true });
+    assert.equal(c.action, "SURRENDER");
+    assert.equal(c.deviate, false);
+  });
+});
+
 
 

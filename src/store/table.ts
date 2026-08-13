@@ -285,6 +285,7 @@ export const useTable = create<TableState>((set, get) => {
       snap: viewToSnap(view),
       plus3Pending: view.plus3Pending,
       plus3Last: view.plus3Last,
+      plus3Stats: view.plus3Stats,
       lastMainBet: view.lastMainBet,
       lastPlus3Bet: view.lastPlus3Bet,
       canRebet: view.canRebet,
@@ -390,8 +391,8 @@ export const useTable = create<TableState>((set, get) => {
   const placeRebet = (): boolean => {
     if (!rebetAffordable()) return false;
     const main = settings.lastMainBet;
-    const side = settings.lastPlus3Bet;
     engine.addBet(main);
+    const side = Math.min(settings.lastPlus3Bet, main);
     if (side > 0 && engine.bankroll >= side) {
       engine.setBankroll(engine.bankroll - side);
       plus3Pending = side;

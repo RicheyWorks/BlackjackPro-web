@@ -18,6 +18,11 @@ export function assertRate(userId: string, op: string): void {
   }
   prev.push(now);
   hits.set(userId, prev);
+  if (hits.size > 4000) {
+    for (const [k, times] of hits) {
+      if (times.every((t) => now - t >= WINDOW_MS)) hits.delete(k);
+    }
+  }
 }
 
 export function _resetRateForTests(): void {

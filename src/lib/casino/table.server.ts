@@ -163,7 +163,7 @@ async function insertTable(sql: Sql, userId: string, s: PitSession): Promise<voi
 async function recordAction(sql: Sql, userId: string, handId: string | null, action: string): Promise<void> {
   await sql`
     insert into casino_actions (hand_id, user_id, seq, action)
-    values (${handId}, ${userId}, ${Date.now() % 1_000_000}, ${action})
+    values (${handId}, ${userId}, ${0}, ${action})
   `;
 }
 
@@ -219,7 +219,10 @@ export async function runTable(userId: string, op: PitOp): Promise<PitView> {
     let profile = await loadProfile(sql, userId);
     const gate = blocked(profile);
     if (gate && op.op !== "sync" && op.op !== "seat") {
-      throw new Error(gate === "self-excluded" ? "This seat is self-excluded." : "Cool-off is still running.");
+      const finish = new Set(["hit", "stand", "double", "split", "surrender", "insure"]);
+      if (!finish.has(op.op)) {
+        throw new Error(gate === "self-excluded" ? "This seat is self-excluded." : "Cool-off is still running.");
+      }
     }
 
     if (op.op === "seat") {
@@ -254,7 +257,7 @@ export async function runTable(userId: string, op: PitOp): Promise<PitView> {
       `;
       await sql`
         update player_profile
-        set rg_cooloff_until = now() + (${op.hours} || ' hours')::interval
+        set rg_cooloff_until = now() + make_interval(hours => ${op.hours})
         where user_id = ${userId}
       `;
       profile = await loadProfile(sql, userId);
@@ -268,7 +271,7 @@ export async function runTable(userId: string, op: PitOp): Promise<PitView> {
       `;
       await sql`
         update player_profile
-        set self_excluded_until = now() + (${op.days} || ' days')::interval
+        set self_excluded_until = now() + make_interval(days => ${op.days})
         where user_id = ${userId}
       `;
       profile = await loadProfile(sql, userId);
@@ -316,8 +319,12 @@ export async function runTable(userId: string, op: PitOp): Promise<PitView> {
       }
       const limit = profile?.rg_loss_limit ?? 0;
       if (limit > 0) {
-        const lost = session.sessionAnchor - exposed(session);
-        if (lost >= limit) throw new Error("Session loss limit reached.");
+        const cashAtRisk = session.sessionAnchor - session.engine.bankroll;
+        const nextLost =
+          op.op === "rebetDeal" && !session.engine.canDeal
+            ? cashAtRisk + session.lastMainBet + session.lastPlus3Bet
+            : cashAtRisk;
+        if (nextLost > limit) throw new Error("Session loss limit reached.");
       }
     }
 

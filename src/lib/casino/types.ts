@@ -65,6 +65,7 @@ export interface PitView {
   canEvenMoney: boolean;
   plus3Pending: number;
   plus3Last: Plus3Result | null;
+  plus3Stats: { wagered: number; returned: number; wins: number };
   lastMainBet: number;
   lastPlus3Bet: number;
   canRebet: boolean;

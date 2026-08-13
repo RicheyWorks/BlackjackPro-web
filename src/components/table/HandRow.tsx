@@ -51,7 +51,8 @@ export function HandRow({
             {dollars(hand.bet)}
           </span>
         )}
-        {hand.doubled && <span>Doubled</span>}
+        {hand.surrendered && <span>Surrendered</span>}
+        {hand.splitAce && <span>One card</span>}
       </div>
       <div className="flex items-end">
         {hand.cards.map((card, i) => (
@@ -63,6 +64,11 @@ export function HandRow({
             <PlayingCard card={card} hidden={hideHole && i === 1} delay={i * 70} />
           </div>
         ))}
+        {hideHole && hand.cards.length < 2 && (
+          <div className="-ml-6 first:ml-0" style={{ zIndex: 1 }}>
+            <PlayingCard hidden delay={70} />
+          </div>
+        )}
       </div>
       <div className="flex h-6 items-center gap-2 font-mono text-sm tabular-nums text-ivory">
         {hand.cards.length > 0 && <span>{shown}</span>}

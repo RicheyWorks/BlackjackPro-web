@@ -19,7 +19,10 @@ export function Hud({
   const chatter = useTable((s) => s.chatter);
   const autoplay = useTable((s) => s.autoplay);
   const mode = useTable((s) => s.mode);
+  const plus3Pending = useTable((s) => s.plus3Pending);
+  const pitBusy = useTable((s) => s.pitBusy);
   const { user, isPending } = useCurrentUserState();
+  const tray = snap.bankroll + snap.pendingBet + plus3Pending;
 
   return (
     <header className="flex flex-wrap items-start justify-between gap-3 px-4 pt-4 sm:px-6">
@@ -33,7 +36,7 @@ export function Hud({
       </div>
 
       <div className="flex flex-wrap items-center justify-end gap-2">
-        <Stat label="Bank" value={dollars(snap.bankroll)} />
+        <Stat label="Bank" value={dollars(tray)} hint={snap.pendingBet > 0 ? `box ${dollars(snap.pendingBet)}` : undefined} />
         <Stat
           label="Shoe"
           value={`${snap.shoeRemaining}`}
@@ -45,6 +48,11 @@ export function Hud({
             value={trueCount.toFixed(1)}
             hint={`RC ${running >= 0 ? "+" : ""}${running} · ${countStake > 0 ? `$${countStake}` : "flat"}`}
           />
+        )}
+        {pitBusy && (
+          <span className="inline-flex h-11 items-center rounded-[var(--radius-sm)] border border-border px-3 text-xs uppercase tracking-[0.14em] text-muted">
+            Pit
+          </span>
         )}
         {autoplay && (
           <span className="inline-flex h-11 items-center rounded-[var(--radius-sm)] border border-ivory/30 px-3 text-xs uppercase tracking-[0.14em] text-ivory">

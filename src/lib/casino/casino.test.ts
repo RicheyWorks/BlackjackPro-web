@@ -4,6 +4,7 @@ import { Engine } from "@/lib/blackjack/engine";
 import { createRules } from "@/lib/blackjack/rules";
 import { HiLoCounter } from "@/lib/blackjack/hilo";
 import { redactDealer } from "./redact";
+import { settlePlus3 } from "@/lib/blackjack/plus3";
 import { parseOp } from "./parse";
 import { applyOp } from "./apply";
 import { dumpSession, parseBlob, type PitSession } from "./session";
@@ -219,6 +220,12 @@ describe("casino phase 2", () => {
     assert.ok(restored);
     assert.equal(restored!.engine.stats.hands, 0);
     assert.equal((restored as unknown as { polluted?: boolean }).polluted, undefined);
+  });
+
+  it("voids a 21+3 that cannot be evaluated", () => {
+    const r = settlePlus3([], undefined, 25);
+    assert.equal(r.returned, 25);
+    assert.equal(r.label, "void");
   });
 });
 

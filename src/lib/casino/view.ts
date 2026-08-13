@@ -50,6 +50,7 @@ export function toView(
     canEvenMoney: snap.canEvenMoney,
     plus3Pending: s.plus3Pending,
     plus3Last: s.plus3Last,
+    plus3Stats: { ...s.plus3 },
     lastMainBet: s.lastMainBet,
     lastPlus3Bet: s.lastPlus3Bet,
     canRebet: rebetAffordable(s) && !realityCheck,

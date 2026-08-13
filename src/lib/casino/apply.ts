@@ -84,18 +84,20 @@ export function applyOp(s: PitSession, op: PitOp, hooks: ApplyHooks): ApplyResul
     case "rebet":
       if (rebetAffordable(s)) {
         e.addBet(s.lastMainBet);
-        if (s.lastPlus3Bet > 0 && e.bankroll >= s.lastPlus3Bet) {
-          e.setBankroll(e.bankroll - s.lastPlus3Bet);
-          s.plus3Pending = s.lastPlus3Bet;
+        const side = Math.min(s.lastPlus3Bet, s.lastMainBet);
+        if (side > 0 && e.bankroll >= side) {
+          e.setBankroll(e.bankroll - side);
+          s.plus3Pending = side;
         }
       }
       break;
     case "rebetDeal":
       if (!e.canDeal && rebetAffordable(s)) {
         e.addBet(s.lastMainBet);
-        if (s.lastPlus3Bet > 0 && e.bankroll >= s.lastPlus3Bet) {
-          e.setBankroll(e.bankroll - s.lastPlus3Bet);
-          s.plus3Pending = s.lastPlus3Bet;
+        const side = Math.min(s.lastPlus3Bet, s.lastMainBet);
+        if (side > 0 && e.bankroll >= side) {
+          e.setBankroll(e.bankroll - side);
+          s.plus3Pending = side;
         }
       }
       if (!e.canDeal) break;

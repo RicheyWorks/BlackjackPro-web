@@ -153,7 +153,8 @@ export function parseBlob(raw: string, bankroll: number, version: number): PitSe
       engine.pendingBet = pending;
     }
     const counter = new HiLoCounter();
-    counter.running = typeof o.running === "number" ? o.running : 0;
+    const running = typeof o.running === "number" && Number.isSafeInteger(o.running) ? o.running : 0;
+    counter.running = Math.max(-400, Math.min(400, running));
     counter.seenLow = asInt(o.seenLow, 0, 400);
     counter.seenMid = asInt(o.seenMid, 0, 400);
     counter.seenHigh = asInt(o.seenHigh, 0, 400);
@@ -166,7 +167,7 @@ export function parseBlob(raw: string, bankroll: number, version: number): PitSe
       plus3Pending: asInt(o.plus3Pending, 0, TABLE_MAX),
       plus3Last: parsePlus3Last(o.plus3Last),
       lastMainBet: asInt(o.lastMainBet, 0, TABLE_MAX),
-      lastPlus3Bet: asInt(o.lastPlus3Bet, 0, TABLE_MAX),
+      lastPlus3Bet: Math.min(asInt(o.lastPlus3Bet, 0, TABLE_MAX), asInt(o.lastMainBet, 0, TABLE_MAX)),
       plus3: {
         wagered: asInt((o.plus3 as { wagered?: number } | undefined)?.wagered, 0),
         returned: asInt((o.plus3 as { returned?: number } | undefined)?.returned, 0),
@@ -175,8 +176,11 @@ export function parseBlob(raw: string, bankroll: number, version: number): PitSe
       tape: sanitizeTape(o.tape),
       seed: o.seed,
       seedCommit: o.seedCommit,
-      prevSeedReveal: typeof o.prevSeedReveal === "string" ? o.prevSeedReveal : null,
-      handId: typeof o.handId === "string" ? o.handId : null,
+      prevSeedReveal:
+        typeof o.prevSeedReveal === "string" && /^[0-9a-f]{64}$/.test(o.prevSeedReveal)
+          ? o.prevSeedReveal
+          : null,
+      handId: typeof o.handId === "string" && o.handId.length > 0 && o.handId.length <= 64 ? o.handId : null,
       counter,
       seen,
       version,

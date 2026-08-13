@@ -780,6 +780,20 @@ describe("pairs", () => {
     e.deal();
     assert.equal(e.canSplit, false);
   });
+
+  it("does not offer double on a 21", () => {
+    const e = new Engine(1000);
+    e.addBet(25);
+    stack(e, [["10"], ["6"], ["10"], ["9"]]);
+    e.deal();
+    e.player[0]!.cards = [
+      { id: 1, rank: "10", suit: "spades" },
+      { id: 2, rank: "A", suit: "hearts" },
+    ];
+    e.player[0]!.fromSplit = true;
+    assert.equal(e.canDouble, false);
+    assert.equal(e.canHit, false);
+  });
 });
 
 

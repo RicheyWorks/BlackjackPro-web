@@ -124,7 +124,8 @@ export function parseLive(raw: unknown): LiveRound | null {
     hands.push(parsed);
   }
   const dealer = parseHand(o.dealer);
-  if (!dealer) return null;
+  if (!dealer || dealer.cards.length < 1) return null;
+  if (hands.some((h) => h.cards.length < 2)) return null;
   const activeHand = asInt(o.activeHand, 0, 3);
   if (activeHand >= hands.length) return null;
   return {

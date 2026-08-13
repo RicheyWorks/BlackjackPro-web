@@ -37,6 +37,7 @@ export function Table() {
   const countBet = useTable((s) => s.countBet);
   const setAutoplay = useTable((s) => s.setAutoplay);
   const autoplay = useTable((s) => s.autoplay);
+  const insure = useTable((s) => s.insure);
   const [settings, setSettings] = useState(false);
   const [stats, setStats] = useState(false);
   const [ageOk, setAgeOk] = useState(false);
@@ -59,6 +60,17 @@ export function Table() {
       if (e.repeat) return;
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       const k = e.key.toLowerCase();
+      if (snap.phase === "INSURANCE") {
+        if (k === "y" || k === "e") {
+          e.preventDefault();
+          insure(true);
+        }
+        if (k === "n") {
+          e.preventDefault();
+          insure(false);
+        }
+        return;
+      }
       if (k === "enter") {
         if (snap.phase !== "BETTING") return;
         e.preventDefault();
@@ -76,7 +88,7 @@ export function Table() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [seated, settings, stats, snap.phase, rebetDeal, hit, stand, double, split, surrender, clearBet, countBet, setAutoplay, autoplay]);
+  }, [seated, settings, stats, snap.phase, rebetDeal, hit, stand, double, split, surrender, clearBet, countBet, setAutoplay, autoplay, insure]);
 
   const hideHole = snap.phase === "PLAYER" || snap.phase === "INSURANCE";
   const settled = snap.phase === "BETTING" && snap.lastOutcomes.length > 0;
@@ -148,7 +160,7 @@ export function Table() {
           )}
         </div>
         <p className="mt-6 max-w-sm font-mono text-[0.65rem] leading-relaxed tracking-wide text-muted">
-          Enter deal · H hit · S stand · D double · P split · R surrender · C count · A coach
+          Enter deal · H hit · S stand · D double · P split · R surrender · Y/N insure · C count · A coach
         </p>
       </div>
     );
@@ -164,10 +176,15 @@ export function Table() {
         </p>
       )}
       {realityCheck && mode === "pit" && (
-        <div className="fixed inset-0 z-40 grid place-items-center bg-felt-deep/80 px-4">
+        <div
+          className="fixed inset-0 z-40 grid place-items-center bg-felt-deep/80 px-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="reality-title"
+        >
           <div className="w-full max-w-sm rounded-[var(--radius-xl)] border border-border bg-felt-mid p-5">
             <p className="text-[0.7rem] uppercase tracking-[0.16em] text-muted">Reality check</p>
-            <h2 className="mt-2 font-display text-2xl text-ivory">Still here?</h2>
+            <h2 id="reality-title" className="mt-2 font-display text-2xl text-ivory">Still here?</h2>
             <p className="mt-2 text-sm leading-relaxed text-muted">
               You have been seated more than 45 minutes. The next deal is locked
               until you confirm. Play chips only.
@@ -189,7 +206,7 @@ export function Table() {
           <HandRow
             hand={snap.dealer}
             label="Dealer"
-            hideHole={hideHole && snap.dealer.cards.length > 1}
+            hideHole={hideHole}
           />
 
           {(settled || (plus3Last && plus3Last.stake > 0)) && (

@@ -84,6 +84,7 @@ export class Engine {
     const h = this.active();
     return (
       h.cards.length === 2 &&
+      handValue(h.cards) < 21 &&
       this.bankroll >= h.bet &&
       !h.splitAce &&
       (this.player.length === 1 || this.rules.doubleAfterSplit)
@@ -452,6 +453,7 @@ export class Engine {
     this.phase = live.phase;
     this.activeHand = Math.min(live.activeHand, live.hands.length - 1);
     this.insuranceBet = live.insuranceBet;
+    this.lastInsuranceBet = live.insuranceBet;
     this.pendingBet = 0;
     this.dealer = { ...live.dealer, cards: [...live.dealer.cards] };
     this.player = live.hands.map((h) => ({ ...h, cards: [...h.cards] }));
@@ -459,6 +461,13 @@ export class Engine {
     this.roundReturned = live.roundReturned;
     this.lastOutcomes = [];
     this.lastNet = 0;
+    while (this.activeHand < this.player.length && this.finished(this.active())) {
+      this.activeHand++;
+    }
+    if (this.activeHand >= this.player.length) {
+      this.phase = "DEALER";
+      this.playDealer();
+    }
     return true;
   }
 

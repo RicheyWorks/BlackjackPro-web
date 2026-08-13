@@ -71,8 +71,11 @@ export function plus3Payout(kind: Plus3Kind | null, bet: number): number {
 }
 
 export function settlePlus3(player: Card[], dealerUp: Card | undefined, bet: number): Plus3Result {
-  if (bet <= 0 || !dealerUp || player.length < 2) {
-    return { stake: bet, returned: 0, kind: null, label: "no eval" };
+  if (bet <= 0) {
+    return { stake: 0, returned: 0, kind: null, label: "no win" };
+  }
+  if (!dealerUp || player.length < 2) {
+    return { stake: bet, returned: bet, kind: null, label: "void" };
   }
   const kind = evaluatePlus3(player[0]!, player[1]!, dealerUp);
   const returned = plus3Payout(kind, bet);

@@ -81,11 +81,13 @@ export class Shoe {
   }
 
   load(data: LiveShoe): boolean {
-    if (data.cards.length > this.decks * 52) return false;
+    if (data.cards.length < 1 || data.cards.length > this.decks * 52) return false;
     const cards: Card[] = [];
+    const ids = new Set<number>();
     for (const raw of data.cards) {
       const c = parseCard(raw);
-      if (!c) return false;
+      if (!c || ids.has(c.id)) return false;
+      ids.add(c.id);
       cards.push(c);
     }
     this.cards = cards;

@@ -68,6 +68,9 @@ export function Actions() {
               Stop coach
             </Button>
           )}
+          <Button variant="ghost" onClick={leaveTable}>
+            Stand up
+          </Button>
         </div>
       </div>
     );
@@ -91,6 +94,9 @@ export function Actions() {
               New session · $1,000
             </Button>
           )}
+          <Button variant="ghost" onClick={leaveTable}>
+            Stand up
+          </Button>
         </div>
       );
     }

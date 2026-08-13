@@ -27,6 +27,7 @@ export function Table() {
   const sessionNet = useTable((s) => s.sessionNet);
   const lastRecap = useTable((s) => s.lastRecap);
   const enterPractice = useTable((s) => s.enterPractice);
+  const leaveTable = useTable((s) => s.leaveTable);
   const snap = useTable((s) => s.snap);
   const theme = useTable((s) => s.theme);
   const toast = useTable((s) => s.toast);
@@ -115,11 +116,16 @@ export function Table() {
       if (k === "r") surrender();
       if (k === "c") countBet();
       if (k === "a") setAutoplay(!autoplay);
+      if (k === "u") {
+        e.preventDefault();
+        leaveTable();
+        return;
+      }
       if (k === "escape") clearBet();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [seated, settings, stats, snap.phase, rebetDeal, hit, stand, double, split, surrender, clearBet, countBet, setAutoplay, autoplay, insure]);
+  }, [seated, settings, stats, snap.phase, rebetDeal, hit, stand, double, split, surrender, clearBet, countBet, setAutoplay, autoplay, insure, leaveTable]);
 
   const hideHole = snap.phase === "PLAYER" || snap.phase === "INSURANCE";
   const settled = snap.phase === "BETTING" && snap.lastOutcomes.length > 0;
@@ -227,7 +233,7 @@ export function Table() {
           )}
         </div>
         <p className="mt-6 max-w-sm font-mono text-[0.65rem] leading-relaxed tracking-wide text-muted">
-          Enter deal · H hit · S stand · D double · P split · R surrender · Y/N insure · C count · A coach
+          Enter deal · H hit · S stand · D double · P split · R surrender · Y/N insure · C count · A coach · U stand up
         </p>
       </div>
     );

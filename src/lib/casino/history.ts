@@ -28,3 +28,39 @@ export function parseDealerJson(raw: string, status: string): HandState | null {
     return null;
   }
 }
+
+const KNOWN_ACTIONS = new Set([
+  "seat",
+  "addChip",
+  "clearBet",
+  "rebet",
+  "rebetDeal",
+  "countBet",
+  "deal",
+  "hit",
+  "stand",
+  "double",
+  "split",
+  "surrender",
+  "insure",
+  "newSession",
+]);
+
+export function sanitizeAction(raw: string): string | null {
+  return KNOWN_ACTIONS.has(raw) ? raw : null;
+}
+
+export function groupActions(
+  rows: { hand_id: string | null; action: string }[],
+): Map<string, string[]> {
+  const map = new Map<string, string[]>();
+  for (const row of rows) {
+    if (!row.hand_id) continue;
+    const action = sanitizeAction(row.action);
+    if (!action) continue;
+    const list = map.get(row.hand_id) ?? [];
+    list.push(action);
+    map.set(row.hand_id, list);
+  }
+  return map;
+}

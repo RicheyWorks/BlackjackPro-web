@@ -4,11 +4,11 @@ import { Engine } from "@/lib/blackjack/engine";
 import { createRules, rulesFingerprint } from "@/lib/blackjack/rules";
 import { HiLoCounter } from "@/lib/blackjack/hilo";
 import { liveInPlay } from "@/lib/blackjack/persist";
-import { PLAY_GRANT, type HandRow, type PitOp, type PitStats, type PitView } from "./types";
+import { PLAY_GRANT, type HandRow, type LedgerRow, type PitOp, type PitStats, type PitView } from "./types";
 import { applyOp } from "./apply";
 import { dumpSession, parseBlob, type PitSession } from "./session";
 import { toView } from "./view";
-import { parseDealerJson, parseHandsJson } from "./history";
+import { parseDealerJson, parseHandsJson, groupActions } from "./history";
 import { buildShuffledShoe, commitSeed, newHandId, newSeed } from "./rng.server";
 import { assertRate } from "./rate";
 import { needsRealityAck } from "./reality";
@@ -432,7 +432,7 @@ export async function listHands(userId: string): Promise<HandRow[]> {
     order by started_at desc
     limit 20
   `;
-  return rows.map((r) => ({
+  const mapped: HandRow[] = rows.map((r) => ({
     id: r.id,
     startedAt: r.started_at,
     settledAt: r.settled_at,
@@ -451,6 +451,42 @@ export async function listHands(userId: string): Promise<HandRow[]> {
     status: r.status,
     player: parseHandsJson(r.player_json),
     dealer: parseDealerJson(r.dealer_json, r.status),
+    actions: [],
+  }));
+  const acts = await sql<{ hand_id: string | null; action: string }>`
+    select hand_id, action from casino_actions
+    where user_id = ${userId}
+    order by id asc
+    limit 400
+  `;
+  const grouped = groupActions(acts);
+  for (const hand of mapped) {
+    hand.actions = grouped.get(hand.id) ?? [];
+  }
+  return mapped;
+}
+
+export async function listWallet(userId: string): Promise<LedgerRow[]> {
+  const sql = await getSql();
+  const rows = await sql<{
+    amount: number;
+    balance_after: number;
+    kind: string;
+    ref: string | null;
+    created_at: string;
+  }>`
+    select amount, balance_after, kind, ref, created_at
+    from wallet_ledger
+    where user_id = ${userId}
+    order by id desc
+    limit 30
+  `;
+  return rows.map((r) => ({
+    amount: r.amount,
+    balanceAfter: r.balance_after,
+    kind: r.kind,
+    ref: r.ref,
+    at: r.created_at,
   }));
 }
 

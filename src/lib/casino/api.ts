@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { authMiddleware } from "@/lib/auth/middleware";
 import { parseDevice, parseOp } from "./parse";
-import type { HandRow, PitStats, PitView } from "./types";
+import type { HandRow, LedgerRow, PitStats, PitView } from "./types";
 
 export const tableAction = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
@@ -30,4 +30,11 @@ export const fetchPitStats = createServerFn({ method: "GET" })
   .handler(async ({ context }): Promise<PitStats> => {
     const { listStats } = await import("./table.server");
     return listStats(context.userId);
+  });
+
+export const fetchWallet = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .handler(async ({ context }): Promise<LedgerRow[]> => {
+    const { listWallet } = await import("./table.server");
+    return listWallet(context.userId);
   });

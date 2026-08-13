@@ -70,6 +70,7 @@ Practice mode stays. It never writes the pit ledger.
 - Burst rate limit (8/sec, 80/min) on pit actions.
 - Retired shoe: last seed + last commit, checked on the server (`seedOk`).
 - Ledger replay of settled hands (hole stays redacted while the box is open).
+- Cash tape (grant / wager / payout) plus the action strip on each hand.
 - Pit seat bound to the browser that opened it.
 - HMAC shoe shuffle is still play-chip grade — a lab will name the seeder later.
 

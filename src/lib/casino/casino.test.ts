@@ -5,7 +5,7 @@ import { createRules } from "@/lib/blackjack/rules";
 import { HiLoCounter } from "@/lib/blackjack/hilo";
 import { redactDealer } from "./redact";
 import { settlePlus3 } from "@/lib/blackjack/plus3";
-import { parseDealerJson, parseHandsJson } from "./history";
+import { parseDealerJson, parseHandsJson, groupActions, sanitizeAction } from "./history";
 import { parseDevice, parseOp } from "./parse";
 import { applyOp } from "./apply";
 import { dumpSession, parseBlob, type PitSession } from "./session";
@@ -278,6 +278,18 @@ describe("casino phase 2", () => {
     );
     assert.equal(settled?.cards.length, 2);
     assert.equal(parseHandsJson("nope").length, 0);
+  });
+
+  it("keeps only known actions on a hand", () => {
+    assert.equal(sanitizeAction("hit"), "hit");
+    assert.equal(sanitizeAction("drop table"), null);
+    const map = groupActions([
+      { hand_id: "a", action: "deal" },
+      { hand_id: "a", action: "hit" },
+      { hand_id: "a", action: "evil" },
+      { hand_id: null, action: "stand" },
+    ]);
+    assert.deepEqual(map.get("a"), ["deal", "hit"]);
   });
 });
 

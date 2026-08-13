@@ -108,6 +108,15 @@ export interface HandRow {
   status: string;
   player: EngineSnapshot["hands"];
   dealer: EngineSnapshot["dealer"] | null;
+  actions: string[];
+}
+
+export interface LedgerRow {
+  amount: number;
+  balanceAfter: number;
+  kind: string;
+  ref: string | null;
+  at: string;
 }
 
 export interface PitStats {

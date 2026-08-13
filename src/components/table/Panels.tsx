@@ -8,8 +8,9 @@ import { CATALOG } from "@/lib/blackjack/achievements";
 import { dollars } from "@/lib/utils";
 import type { ThemeId } from "@/lib/blackjack/types";
 import { cn } from "@/lib/utils";
-import { fetchHands, fetchPitStats } from "@/lib/casino/api";
-import type { HandRow, PitStats } from "@/lib/casino/types";
+import { fetchHands, fetchPitStats, fetchWallet } from "@/lib/casino/api";
+import type { HandRow, LedgerRow, PitStats } from "@/lib/casino/types";
+import { TABLE_MIN } from "@/lib/blackjack/money";
 import { PlayingCard } from "./PlayingCard";
 import { handLabel } from "@/lib/blackjack/hand";
 
@@ -46,6 +47,7 @@ export function SettingsPanel({
   const cooloff = useTable((s) => s.cooloff);
   const selfExclude = useTable((s) => s.selfExclude);
   const lossLimit = useTable((s) => s.lossLimit);
+  const plus3Pending = useTable((s) => s.plus3Pending);
   const seedCommit = useTable((s) => s.seedCommit);
   const seedReveal = useTable((s) => s.seedReveal);
   const lastSeedCommit = useTable((s) => s.lastSeedCommit);
@@ -187,7 +189,7 @@ export function SettingsPanel({
                 Exclude 7d
               </button>
             </div>
-            {snap.bankroll === 0 && snap.pendingBet === 0 && (
+            {snap.bankroll + snap.pendingBet + plus3Pending < TABLE_MIN && (
               <Button variant="outline" className="w-full" onClick={() => refillPit()}>
                 Bust refill · $1,000 play chips
               </Button>
@@ -217,21 +219,24 @@ export function StatsPanel({
   const plus3Net = plus3.returned - plus3.wagered;
   const [hands, setHands] = useState<HandRow[]>([]);
   const [pit, setPit] = useState<PitStats | null>(null);
+  const [wallet, setWallet] = useState<LedgerRow[]>([]);
   const [openId, setOpenId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open || mode !== "pit") return;
     let live = true;
-    void Promise.all([fetchHands(), fetchPitStats()])
-      .then(([h, st]) => {
+    void Promise.all([fetchHands(), fetchPitStats(), fetchWallet()])
+      .then(([h, st, w]) => {
         if (!live) return;
         setHands(h);
         setPit(st);
+        setWallet(w);
       })
       .catch(() => {
         if (!live) return;
         setHands([]);
         setPit(null);
+        setWallet([]);
       });
     return () => {
       live = false;
@@ -272,6 +277,23 @@ export function StatsPanel({
               {(rulesHash ?? pit.rulesHash) ? ` · ${(rulesHash ?? pit.rulesHash).slice(0, 12)}…` : ""}
             </p>
           )}
+        </section>
+      )}
+      {mode === "pit" && wallet.length > 0 && (
+        <section className="mt-6">
+          <h3 className="mb-2 text-[0.7rem] uppercase tracking-[0.16em] text-muted">Cash tape</h3>
+          <ul className="space-y-1.5">
+            {wallet.map((row, i) => (
+              <li key={`${row.at}-${i}`} className="flex items-baseline justify-between gap-3 font-mono text-[0.7rem]">
+                <span className="text-muted">{kindLabel(row.kind)}</span>
+                <span className="tabular-nums text-ivory">
+                  {row.amount > 0 ? "+" : ""}
+                  {dollars(row.amount)}
+                  <span className="ml-2 text-muted">{dollars(row.balanceAfter)}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
       {mode === "pit" && hands.length > 0 && (
@@ -369,6 +391,11 @@ function HandReplay({ hand }: { hand: HandRow }) {
           </div>
         </div>
       ))}
+      {hand.actions.length > 0 && (
+        <p className="font-mono text-[0.6rem] tracking-wide text-muted">
+          {hand.actions.map(actionLabel).join(" · ")}
+        </p>
+      )}
       <p className="font-mono text-[0.6rem] leading-relaxed text-muted">
         Wagered {dollars(hand.wagered)} · returned {dollars(hand.returned)}
         {hand.seedReveal
@@ -377,6 +404,48 @@ function HandReplay({ hand }: { hand: HandRow }) {
       </p>
     </div>
   );
+}
+
+function kindLabel(kind: string): string {
+  switch (kind) {
+    case "grant":
+      return "Grant";
+    case "wager":
+      return "Wager";
+    case "plus3_wager":
+      return "21+3";
+    case "insurance":
+      return "Insurance";
+    case "payout":
+      return "Payout";
+    case "plus3_payout":
+      return "21+3 pay";
+    case "refund":
+      return "Refund";
+    case "even_money":
+      return "Even money";
+    case "void":
+      return "Void";
+    default:
+      return kind;
+  }
+}
+
+function actionLabel(op: string): string {
+  switch (op) {
+    case "rebetDeal":
+      return "deal again";
+    case "addChip":
+      return "chip";
+    case "countBet":
+      return "count bet";
+    case "clearBet":
+      return "clear";
+    case "newSession":
+      return "void";
+    default:
+      return op;
+  }
 }
 
 function Fact({ k, v }: { k: string; v: string }) {

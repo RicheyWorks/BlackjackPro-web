@@ -51,7 +51,7 @@ export function parseCard(raw: unknown): Card | null {
   return { id: o.id as number, rank: o.rank as Rank, suit: o.suit as Suit };
 }
 
-function parseHand(raw: unknown): HandState | null {
+export function parseHand(raw: unknown): HandState | null {
   if (!raw || typeof raw !== "object") return null;
   const o = raw as Record<string, unknown>;
   if (!Array.isArray(o.cards) || o.cards.length > 21) return null;

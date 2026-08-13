@@ -8,6 +8,7 @@ import { PLAY_GRANT, type HandRow, type PitOp, type PitStats, type PitView } fro
 import { applyOp } from "./apply";
 import { dumpSession, parseBlob, type PitSession } from "./session";
 import { toView } from "./view";
+import { parseDealerJson, parseHandsJson } from "./history";
 import { buildShuffledShoe, commitSeed, newHandId, newSeed } from "./rng.server";
 import { assertRate } from "./rate";
 import { needsRealityAck } from "./reality";
@@ -412,6 +413,9 @@ export async function listHands(userId: string): Promise<HandRow[]> {
     settled_at: string | null;
     main_bet: number;
     plus3_bet: number;
+    insurance_bet: number;
+    wagered: number;
+    returned: number;
     net: number;
     outcomes: string;
     seed_commit: string;
@@ -419,9 +423,11 @@ export async function listHands(userId: string): Promise<HandRow[]> {
     rules_hash: string;
     rules_pack: string;
     status: string;
+    player_json: string;
+    dealer_json: string;
   }>`
-    select id, started_at, settled_at, main_bet, plus3_bet, net, outcomes,
-           seed_commit, seed_reveal, rules_hash, rules_pack, status
+    select id, started_at, settled_at, main_bet, plus3_bet, insurance_bet, wagered, returned, net, outcomes,
+           seed_commit, seed_reveal, rules_hash, rules_pack, status, player_json, dealer_json
     from casino_hands where user_id = ${userId}
     order by started_at desc
     limit 20
@@ -432,13 +438,19 @@ export async function listHands(userId: string): Promise<HandRow[]> {
     settledAt: r.settled_at,
     mainBet: r.main_bet,
     plus3Bet: r.plus3_bet,
+    insuranceBet: r.insurance_bet,
+    wagered: r.wagered,
+    returned: r.returned,
     net: r.net,
     outcomes: r.outcomes,
     seedCommit: r.seed_commit,
     seedReveal: r.seed_reveal,
+    seedOk: r.seed_reveal ? commitSeed(r.seed_reveal) === r.seed_commit : null,
     rulesHash: r.rules_hash,
     rulesPack: r.rules_pack,
     status: r.status,
+    player: parseHandsJson(r.player_json),
+    dealer: parseDealerJson(r.dealer_json, r.status),
   }));
 }
 

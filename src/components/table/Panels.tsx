@@ -10,6 +10,8 @@ import type { ThemeId } from "@/lib/blackjack/types";
 import { cn } from "@/lib/utils";
 import { fetchHands, fetchPitStats } from "@/lib/casino/api";
 import type { HandRow, PitStats } from "@/lib/casino/types";
+import { PlayingCard } from "./PlayingCard";
+import { handLabel } from "@/lib/blackjack/hand";
 
 const THEMES: { id: ThemeId; name: string; note: string }[] = [
   { id: "midnight", name: "Midnight", note: "Ink forest · pirate rail" },
@@ -87,7 +89,7 @@ export function SettingsPanel({
         <section>
           <h3 className="mb-2 text-xs uppercase tracking-[0.16em] text-muted">Keys</h3>
           <p className="font-mono text-xs leading-relaxed text-muted">
-            Enter deal · H hit · S stand · D double · P split · R surrender · C count · A coach · Esc clear
+            Enter deal · H hit · S stand · D double · P split · R surrender · Y/N insure · C count · A coach · Esc clear
           </p>
         </section>
 
@@ -215,6 +217,7 @@ export function StatsPanel({
   const plus3Net = plus3.returned - plus3.wagered;
   const [hands, setHands] = useState<HandRow[]>([]);
   const [pit, setPit] = useState<PitStats | null>(null);
+  const [openId, setOpenId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open || mode !== "pit") return;
@@ -275,18 +278,31 @@ export function StatsPanel({
         <section className="mt-6">
           <h3 className="mb-2 text-[0.7rem] uppercase tracking-[0.16em] text-muted">Hands</h3>
           <ul className="space-y-2">
-            {hands.map((h) => (
-              <li key={h.id} className="rounded-[var(--radius-sm)] border border-border px-3 py-2">
-                <p className="flex justify-between gap-3 text-sm text-ivory">
-                  <span>{h.outcomes || h.status}</span>
-                  <span className="font-mono tabular-nums">{dollars(h.net)}</span>
-                </p>
-                <p className="mt-0.5 font-mono text-[0.6rem] text-muted">
-                  ${h.mainBet}
-                  {h.plus3Bet ? ` +21+3 $${h.plus3Bet}` : ""} · {h.rulesPack || h.rulesHash.slice(0, 8)}
-                </p>
-              </li>
-            ))}
+            {hands.map((h) => {
+              const open = openId === h.id;
+              return (
+                <li key={h.id} className="rounded-[var(--radius-sm)] border border-border">
+                  <button
+                    type="button"
+                    className="flex w-full flex-col gap-0.5 px-3 py-2 text-left"
+                    onClick={() => setOpenId(open ? null : h.id)}
+                    aria-expanded={open}
+                  >
+                    <p className="flex justify-between gap-3 text-sm text-ivory">
+                      <span>{h.outcomes || h.status}</span>
+                      <span className="font-mono tabular-nums">{dollars(h.net)}</span>
+                    </p>
+                    <p className="font-mono text-[0.6rem] text-muted">
+                      ${h.mainBet}
+                      {h.plus3Bet ? ` +21+3 $${h.plus3Bet}` : ""}
+                      {h.insuranceBet ? ` · ins $${h.insuranceBet}` : ""} ·{" "}
+                      {h.rulesPack || h.rulesHash.slice(0, 8)}
+                    </p>
+                  </button>
+                  {open && <HandReplay hand={h} />}
+                </li>
+              );
+            })}
           </ul>
         </section>
       )}
@@ -311,6 +327,55 @@ export function StatsPanel({
         })}
       </ul>
     </Sheet>
+  );
+}
+
+function HandReplay({ hand }: { hand: HandRow }) {
+  const hideHole = hand.status !== "settled";
+  return (
+    <div className="space-y-3 border-t border-border px-3 py-3">
+      {hand.dealer && (
+        <div>
+          <p className="mb-1 text-[0.65rem] uppercase tracking-[0.14em] text-muted">
+            Dealer{hideHole ? "" : ` · ${handLabel(hand.dealer.cards)}`}
+          </p>
+          <div className="flex">
+            {hand.dealer.cards.map((c, i) => (
+              <div key={c.id} className="-ml-5 first:ml-0">
+                <PlayingCard card={c} hidden={hideHole && i === 1} compact delay={0} />
+              </div>
+            ))}
+            {hideHole && hand.dealer.cards.length < 2 && (
+              <div className="-ml-5 first:ml-0">
+                <PlayingCard hidden compact delay={0} />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      {hand.player.map((box, i) => (
+        <div key={i}>
+          <p className="mb-1 text-[0.65rem] uppercase tracking-[0.14em] text-muted">
+            {hand.player.length > 1 ? `Hand ${i + 1}` : "You"}
+            {box.cards.length ? ` · ${handLabel(box.cards)}` : ""}
+            {box.bet ? ` · ${dollars(box.bet)}` : ""}
+          </p>
+          <div className="flex">
+            {box.cards.map((c) => (
+              <div key={c.id} className="-ml-5 first:ml-0">
+                <PlayingCard card={c} compact delay={0} />
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+      <p className="font-mono text-[0.6rem] leading-relaxed text-muted">
+        Wagered {dollars(hand.wagered)} · returned {dollars(hand.returned)}
+        {hand.seedReveal
+          ? ` · shoe ${hand.seedOk ? "checks out" : "does not match"}`
+          : " · seed hidden until this shoe is cut"}
+      </p>
+    </div>
   );
 }
 

@@ -5,6 +5,7 @@ import { createRules } from "@/lib/blackjack/rules";
 import { HiLoCounter } from "@/lib/blackjack/hilo";
 import { redactDealer } from "./redact";
 import { settlePlus3 } from "@/lib/blackjack/plus3";
+import { parseDealerJson, parseHandsJson } from "./history";
 import { parseDevice, parseOp } from "./parse";
 import { applyOp } from "./apply";
 import { dumpSession, parseBlob, type PitSession } from "./session";
@@ -239,6 +240,44 @@ describe("casino phase 2", () => {
     const r = settlePlus3([], undefined, 25);
     assert.equal(r.returned, 25);
     assert.equal(r.label, "void");
+  });
+
+  it("hides the hole on an open hand in the ledger", () => {
+    const dealer = parseDealerJson(
+      JSON.stringify({
+        cards: [
+          { id: 1, rank: "A", suit: "spades" },
+          { id: 2, rank: "10", suit: "hearts" },
+        ],
+        bet: 0,
+        doubled: false,
+        surrendered: false,
+        fromSplit: false,
+        splitAce: false,
+        stood: false,
+      }),
+      "open",
+    );
+    assert.ok(dealer);
+    assert.equal(dealer!.cards.length, 1);
+    assert.equal(dealer!.cards[0]!.rank, "A");
+    const settled = parseDealerJson(
+      JSON.stringify({
+        cards: [
+          { id: 1, rank: "A", suit: "spades" },
+          { id: 2, rank: "10", suit: "hearts" },
+        ],
+        bet: 0,
+        doubled: false,
+        surrendered: false,
+        fromSplit: false,
+        splitAce: false,
+        stood: false,
+      }),
+      "settled",
+    );
+    assert.equal(settled?.cards.length, 2);
+    assert.equal(parseHandsJson("nope").length, 0);
   });
 });
 

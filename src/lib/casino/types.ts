@@ -95,13 +95,19 @@ export interface HandRow {
   settledAt: string | null;
   mainBet: number;
   plus3Bet: number;
+  insuranceBet: number;
+  wagered: number;
+  returned: number;
   net: number;
   outcomes: string;
   seedCommit: string;
   seedReveal: string | null;
+  seedOk: boolean | null;
   rulesHash: string;
   rulesPack: string;
   status: string;
+  player: EngineSnapshot["hands"];
+  dealer: EngineSnapshot["dealer"] | null;
 }
 
 export interface PitStats {

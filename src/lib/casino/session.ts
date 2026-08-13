@@ -8,7 +8,31 @@ import { PLUS3_LABEL, type Plus3Kind } from "@/lib/blackjack/plus3";
 import type { TapeMark } from "@/lib/blackjack/tape";
 import { sanitizeTape } from "@/lib/blackjack/tape";
 import type { SessionStats } from "@/lib/blackjack/types";
-import { EMPTY_STATS } from "@/lib/blackjack/types";
+
+const DANGEROUS = new Set(["__proto__", "constructor", "prototype"]);
+
+function jsonReviver(key: string, value: unknown): unknown {
+  if (DANGEROUS.has(key)) return undefined;
+  return value;
+}
+
+function parseStats(raw: unknown): SessionStats {
+  const o = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  return {
+    hands: asInt(o.hands, 0),
+    wins: asInt(o.wins, 0),
+    losses: asInt(o.losses, 0),
+    pushes: asInt(o.pushes, 0),
+    blackjacks: asInt(o.blackjacks, 0),
+    busts: asInt(o.busts, 0),
+    doubles: asInt(o.doubles, 0),
+    splits: asInt(o.splits, 0),
+    surrenders: asInt(o.surrenders, 0),
+    totalWagered: asInt(o.totalWagered, 0),
+    totalReturned: asInt(o.totalReturned, 0),
+    peakBankroll: asInt(o.peakBankroll, 0),
+  };
+}
 
 const PLUS3_KINDS: Plus3Kind[] = [
   "SUITED_TRIPS",
@@ -113,12 +137,12 @@ export function dumpSession(s: PitSession): PitBlob {
 
 export function parseBlob(raw: string, bankroll: number, version: number): PitSession | null {
   try {
-    const o = JSON.parse(raw) as Record<string, unknown>;
+    const o = JSON.parse(raw, jsonReviver) as Record<string, unknown>;
     if (typeof o.seed !== "string" || !/^[0-9a-f]{64}$/.test(o.seed)) return null;
     if (typeof o.seedCommit !== "string" || !/^[0-9a-f]{64}$/.test(o.seedCommit)) return null;
     const soft17 = o.soft17 === true;
     const engine = new Engine(clampMoney(bankroll), createRules({ dealerHitsSoft17: soft17 }));
-    engine.stats = { ...EMPTY_STATS, ...(typeof o.stats === "object" && o.stats ? o.stats : {}) };
+    engine.stats = parseStats(o.stats);
     const shoe = o.shoe as LiveShoe | undefined;
     if (!shoe || !engine.shoe.load(shoe)) return null;
     const live = parseLive(o.live);

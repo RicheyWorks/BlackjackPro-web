@@ -34,7 +34,8 @@ export function Betting() {
       </div>
       <div className="flex flex-wrap justify-center gap-2">
         {CHIP_VALUES.map((v) => {
-          const room = betRail === "plus3" ? TABLE_MAX - plus3Pending : TABLE_MAX - snap.pendingBet;
+          const room =
+            betRail === "plus3" ? snap.pendingBet - plus3Pending : TABLE_MAX - snap.pendingBet;
           const enabled = snap.bankroll >= v && v <= room;
           return (
             <ChipButton

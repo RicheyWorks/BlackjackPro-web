@@ -31,6 +31,7 @@ export class Engine {
   bankroll: number;
   pendingBet = 0;
   insuranceBet = 0;
+  lastInsuranceBet = 0;
   phase: Phase = "BETTING";
   lastOutcomes: Outcome[] = [];
   lastNet = 0;
@@ -146,6 +147,7 @@ export class Engine {
     this.dealer = emptyHand();
     this.activeHand = 0;
     this.insuranceBet = 0;
+    this.lastInsuranceBet = 0;
     this.lastOutcomes = [];
     this.roundWagered = 0;
     this.roundReturned = 0;
@@ -177,6 +179,7 @@ export class Engine {
     this.player = [first];
     this.activeHand = 0;
     this.insuranceBet = 0;
+    this.lastInsuranceBet = 0;
     this.phase = "DEALING";
     this.stats.hands++;
 
@@ -206,6 +209,7 @@ export class Engine {
       this.bankroll -= cost;
       this.recordWager(cost);
       this.insuranceBet = cost;
+      this.lastInsuranceBet = cost;
     } else {
       this.insuranceBet = 0;
     }

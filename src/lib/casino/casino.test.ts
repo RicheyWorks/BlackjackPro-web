@@ -194,6 +194,33 @@ describe("casino phase 2", () => {
     });
     assert.equal(step.kind, "stop");
   });
+
+  it("refuses a 21+3 chip bigger than the main box", () => {
+    const s = session();
+    applyOp(s, { op: "addChip", n: 25, rail: "plus3" }, hooks);
+    assert.equal(s.plus3Pending, 0);
+    assert.equal(s.engine.bankroll, 1000);
+    applyOp(s, { op: "addChip", n: 25, rail: "main" }, hooks);
+    applyOp(s, { op: "addChip", n: 25, rail: "plus3" }, hooks);
+    applyOp(s, { op: "addChip", n: 5, rail: "plus3" }, hooks);
+    assert.equal(s.plus3Pending, 25);
+    assert.equal(s.engine.bankroll, 950);
+  });
+
+  it("drops prototype keys and junk stats from a pit snapshot", () => {
+    const s = session();
+    applyOp(s, { op: "addChip", n: 25, rail: "main" }, hooks);
+    const blob = dumpSession(s);
+    const raw = JSON.stringify({ ...blob, stats: { hands: "nope", wins: 1e20 } }).replace(
+      "{",
+      '{"__proto__":{"polluted":true},',
+    );
+    const restored = parseBlob(raw, 975, 1);
+    assert.ok(restored);
+    assert.equal(restored!.engine.stats.hands, 0);
+    assert.equal((restored as unknown as { polluted?: boolean }).polluted, undefined);
+  });
 });
+
 
 

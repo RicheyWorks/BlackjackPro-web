@@ -60,6 +60,7 @@ export function Table() {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       const k = e.key.toLowerCase();
       if (k === "enter") {
+        if (snap.phase !== "BETTING") return;
         e.preventDefault();
         rebetDeal();
         return;
@@ -75,7 +76,7 @@ export function Table() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [seated, settings, stats, rebetDeal, hit, stand, double, split, surrender, clearBet, countBet, setAutoplay, autoplay]);
+  }, [seated, settings, stats, snap.phase, rebetDeal, hit, stand, double, split, surrender, clearBet, countBet, setAutoplay, autoplay]);
 
   const hideHole = snap.phase === "PLAYER" || snap.phase === "INSURANCE";
   const settled = snap.phase === "BETTING" && snap.lastOutcomes.length > 0;

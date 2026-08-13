@@ -2,7 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { Engine } from "./engine";
 import { blackjackPayout, insurancePremium, surrenderRefund } from "./rules";
-import { handValue, isBlackjack, isSoft } from "./hand";
+import { handValue, isBlackjack, isPair, isSoft } from "./hand";
 import { basicAdvice } from "./strategy";
 import { HiLoCounter, hiloValue, shoeMix, syncVisibleCount } from "./hilo";
 import { nextAutoStep } from "./autoplay";
@@ -767,6 +767,18 @@ describe("backend integrity", () => {
     const c = coachAdvice(hand("10", "6"), up("10"), 4, { allowSurrender: true });
     assert.equal(c.action, "SURRENDER");
     assert.equal(c.deviate, false);
+  });
+});
+
+describe("pairs", () => {
+  it("does not treat ten-jack as a pair", () => {
+    assert.equal(isPair([card(1, "10"), card(2, "J")]), false);
+    assert.equal(isPair([card(1, "10"), card(2, "10", "hearts")]), true);
+    const e = new Engine(1000);
+    e.addBet(25);
+    stack(e, [["10"], ["6"], ["J"], ["9"]]);
+    e.deal();
+    assert.equal(e.canSplit, false);
   });
 });
 

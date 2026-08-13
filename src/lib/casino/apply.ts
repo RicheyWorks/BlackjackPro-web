@@ -51,6 +51,10 @@ function resolvePlus3(s: PitSession): void {
   }
 }
 
+function ensureShoe(s: PitSession, hooks: ApplyHooks): void {
+  if (s.engine.shoe.remaining() < 20) hooks.reshuffle(s);
+}
+
 export function applyOp(s: PitSession, op: PitOp, hooks: ApplyHooks): ApplyResult {
   const e = s.engine;
   let settled = false;
@@ -62,7 +66,7 @@ export function applyOp(s: PitSession, op: PitOp, hooks: ApplyHooks): ApplyResul
     case "addChip": {
       if (e.phase !== "BETTING" || !isTableChip(op.n) || e.bankroll < op.n) break;
       if (op.rail === "plus3") {
-        if (s.plus3Pending + op.n > TABLE_MAX) break;
+        if (s.plus3Pending + op.n > e.pendingBet) break;
         e.setBankroll(e.bankroll - op.n);
         s.plus3Pending += op.n;
       } else if (e.canBet(op.n)) {
@@ -98,6 +102,7 @@ export function applyOp(s: PitSession, op: PitOp, hooks: ApplyHooks): ApplyResul
     // fall through
     case "deal": {
       if (!e.canDeal) break;
+      ensureShoe(s, hooks);
       if (e.shoe.needsShuffle()) hooks.reshuffle(s);
       const main = e.pendingBet;
       if (s.plus3Pending > main) {
@@ -126,6 +131,7 @@ export function applyOp(s: PitSession, op: PitOp, hooks: ApplyHooks): ApplyResul
     }
     case "hit":
       if (e.canHit) {
+        ensureShoe(s, hooks);
         e.hit();
         note(s);
         if (e.phase === "BETTING") {
@@ -136,6 +142,7 @@ export function applyOp(s: PitSession, op: PitOp, hooks: ApplyHooks): ApplyResul
       break;
     case "stand":
       if (e.canStand) {
+        ensureShoe(s, hooks);
         e.stand();
         note(s);
         if (e.phase === "BETTING") {
@@ -146,6 +153,7 @@ export function applyOp(s: PitSession, op: PitOp, hooks: ApplyHooks): ApplyResul
       break;
     case "double":
       if (e.canDouble) {
+        ensureShoe(s, hooks);
         e.doubleDown();
         note(s);
         if (e.phase === "BETTING") {
@@ -156,6 +164,7 @@ export function applyOp(s: PitSession, op: PitOp, hooks: ApplyHooks): ApplyResul
       break;
     case "split":
       if (e.canSplit) {
+        ensureShoe(s, hooks);
         e.split();
         note(s);
         if (e.phase === "BETTING") {
@@ -176,6 +185,7 @@ export function applyOp(s: PitSession, op: PitOp, hooks: ApplyHooks): ApplyResul
       if (e.phase !== "INSURANCE") break;
       const natural = e.player[0] ? isBlackjack(e.player[0]) : false;
       if (op.yes && !natural && !e.canInsure) break;
+      ensureShoe(s, hooks);
       e.takeInsurance(op.yes);
       note(s);
       if (e.lastOutcomes.length > 0) {

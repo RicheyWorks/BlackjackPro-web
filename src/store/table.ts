@@ -96,14 +96,14 @@ let pitLock = false;
 
 function persist(): void {
   if (tableMode === "pit") {
+    const prior = loadSave();
     writeSave({
-      ...settings,
-      bankroll: settings.bankroll,
-      stats: settings.stats,
-      pendingBet: 0,
-      plus3Pending: 0,
-      inPlay: 0,
-      live: null,
+      ...prior,
+      theme: settings.theme,
+      sound: settings.sound,
+      hints: settings.hints,
+      showCount: settings.showCount,
+      dealerHitsSoft17: settings.dealerHitsSoft17,
     });
     return;
   }
@@ -304,6 +304,7 @@ export const useTable = create<TableState>((set, get) => {
       ...extra,
     });
     persist();
+    if (autoOn) bumpAuto();
   };
 
   const runPit = async (op: PitOp) => {
@@ -491,7 +492,7 @@ export const useTable = create<TableState>((set, get) => {
       if (engine.phase !== "BETTING" || !isTableChip(n) || engine.bankroll < n) return;
       const rail = get().betRail;
       if (rail === "plus3") {
-        if (plus3Pending + n > TABLE_MAX) return;
+        if (plus3Pending + n > engine.pendingBet) return;
         engine.setBankroll(engine.bankroll - n);
         plus3Pending += n;
       } else {
@@ -700,10 +701,7 @@ export const useTable = create<TableState>((set, get) => {
     },
 
     setSoft17(v) {
-      if (ifPit({ op: "setSoft17", v })) {
-        set({ soft17: v });
-        return;
-      }
+      if (ifPit({ op: "setSoft17", v })) return;
       if (engine.phase !== "BETTING") return;
       settings.dealerHitsSoft17 = v;
       engine.rules.dealerHitsSoft17 = v;
@@ -728,8 +726,12 @@ export const useTable = create<TableState>((set, get) => {
 
     autoTick() {
       if (!autoOn) return;
-      const snap = engine.snapshot();
-      const tc = counter.trueCount(snap.shoeRemaining);
+      if (tableMode === "pit" && pitLock) {
+        bumpAuto();
+        return;
+      }
+      const st = get();
+      const snap = st.snap;
       const step = nextAutoStep({
         phase: snap.phase,
         canDeal: snap.canDeal,
@@ -737,8 +739,8 @@ export const useTable = create<TableState>((set, get) => {
         canEvenMoney: snap.canEvenMoney,
         pendingBet: snap.pendingBet,
         bankroll: snap.bankroll,
-        countStake: chooseCountBet(tc, engine.bankroll, engine.pendingBet),
-        trueCount: tc,
+        countStake: st.countStake,
+        trueCount: st.trueCount,
         canHit: snap.canHit,
         canStand: snap.canStand,
         canDouble: snap.canDouble,
@@ -746,7 +748,7 @@ export const useTable = create<TableState>((set, get) => {
         canSurrender: snap.canSurrender,
         hand: snap.hands[snap.activeIndex],
         up: snap.dealer.cards[0],
-        soft17: settings.dealerHitsSoft17,
+        soft17: st.soft17,
       });
       if (step.kind === "stop") {
         haltAuto();

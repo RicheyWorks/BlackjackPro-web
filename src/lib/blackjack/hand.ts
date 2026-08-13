@@ -51,7 +51,7 @@ export function isBust(cards: Card[]): boolean {
 
 export function isPair(cards: Card[]): boolean {
   if (cards.length !== 2) return false;
-  return rankValue(cards[0].rank) === rankValue(cards[1].rank);
+  return cards[0]!.rank === cards[1]!.rank;
 }
 
 export function isBlackjack(hand: HandState): boolean {

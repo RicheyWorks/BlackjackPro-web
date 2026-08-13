@@ -192,7 +192,7 @@ async function closeHand(sql: Sql, userId: string, s: PitSession): Promise<void>
   await sql`
     update casino_hands
     set settled_at = now(),
-        insurance_bet = ${e.insuranceBet},
+        insurance_bet = ${e.lastInsuranceBet},
         wagered = ${fig.wagered},
         returned = ${fig.returned},
         net = ${fig.net},
@@ -321,11 +321,21 @@ export async function runTable(userId: string, op: PitOp): Promise<PitView> {
       }
     }
 
+    const seedBefore = session.seed;
     const before = session.engine.bankroll;
     const beforeHand = session.handId;
     const result = applyOp(session, op, { reshuffle, newHandId });
     const after = session.engine.bankroll;
     const delta = after - before;
+
+    if (session.seed !== seedBefore && session.prevSeedReveal) {
+      const oldCommit = commitSeed(session.prevSeedReveal);
+      await sql`
+        update casino_hands
+        set seed_reveal = ${session.prevSeedReveal}
+        where user_id = ${userId} and seed_commit = ${oldCommit} and seed_reveal is null
+      `;
+    }
 
     if (op.op === "newSession") await voidHand(sql, userId, beforeHand);
 
@@ -346,7 +356,19 @@ export async function runTable(userId: string, op: PitOp): Promise<PitView> {
       else kind = "payout";
     }
     if (delta !== 0 && op.op !== "refill") {
-      await writeLedger(sql, userId, delta, after, kind, session.handId);
+      const plus3Pay =
+        (op.op === "deal" || op.op === "rebetDeal") && session.plus3Last && session.plus3Last.returned > 0
+          ? session.plus3Last.returned
+          : 0;
+      if (plus3Pay > 0 && plus3Pay !== delta) {
+        await writeLedger(sql, userId, plus3Pay, before + plus3Pay, "plus3_payout", session.handId);
+        const rest = delta - plus3Pay;
+        if (rest !== 0) {
+          await writeLedger(sql, userId, rest, after, rest < 0 ? "wager" : "payout", session.handId);
+        }
+      } else {
+        await writeLedger(sql, userId, delta, after, kind, session.handId);
+      }
     }
 
     if (op.op !== "sync") await recordAction(sql, userId, session.handId, op.op);
@@ -413,13 +435,20 @@ export async function listStats(userId: string): Promise<PitStats> {
       coalesce(sum(wagered), 0)::int as wagered,
       coalesce(sum(returned), 0)::int as returned,
       coalesce(sum(net), 0)::int as net,
-      count(*) filter (where status = 'void')::int as voids,
+      (select count(*)::int from casino_hands v where v.user_id = ${userId} and v.status = 'void') as voids,
       count(*) filter (where started_at > now() - interval '1 hour')::int as last_hour
     from casino_hands
-    where user_id = ${userId}
+    where user_id = ${userId} and status = ${"settled"}
   `;
   const r = rows[0] ?? { hands: 0, wagered: 0, returned: 0, net: 0, voids: 0, last_hour: 0 };
-  const pack = rulesFingerprint(createRules({ dealerHitsSoft17: false }));
+  const packRows = await sql<{ rules_pack: string; rules_hash: string }>`
+    select rules_pack, rules_hash from casino_hands
+    where user_id = ${userId} and rules_pack <> ''
+    order by started_at desc
+    limit 1
+  `;
+  const pack = packRows[0]?.rules_pack || rulesFingerprint(createRules({ dealerHitsSoft17: false }));
+  const hash = packRows[0]?.rules_hash || hashRules(pack);
   return {
     hands: r.hands,
     wagered: r.wagered,
@@ -429,6 +458,6 @@ export async function listStats(userId: string): Promise<PitStats> {
     voids: r.voids,
     lastHourHands: r.last_hour,
     rulesPack: pack,
-    rulesHash: hashRules(pack),
+    rulesHash: hash,
   };
 }

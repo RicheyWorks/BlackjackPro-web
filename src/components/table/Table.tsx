@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { useTable } from "@/store/table";
 import { unlockAudio } from "@/lib/blackjack/sfx";
 import { dollars } from "@/lib/utils";
+import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { HandRow } from "./HandRow";
 import { Actions } from "./Actions";
 import { Betting } from "./Betting";
@@ -14,6 +16,10 @@ import { Button } from "@/components/ui/button";
 export function Table() {
   const seated = useTable((s) => s.seated);
   const seat = useTable((s) => s.seat);
+  const openPit = useTable((s) => s.openPit);
+  const mode = useTable((s) => s.mode);
+  const pitBusy = useTable((s) => s.pitBusy);
+  const realityCheck = useTable((s) => s.realityCheck);
   const snap = useTable((s) => s.snap);
   const theme = useTable((s) => s.theme);
   const toast = useTable((s) => s.toast);
@@ -32,6 +38,8 @@ export function Table() {
   const autoplay = useTable((s) => s.autoplay);
   const [settings, setSettings] = useState(false);
   const [stats, setStats] = useState(false);
+  const [ageOk, setAgeOk] = useState(false);
+  const { user, isPending } = useCurrentUserState();
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -100,8 +108,43 @@ export function Table() {
             seat();
           }}
         >
-          Sit down
+          Practice table
         </Button>
+        <div className="mt-8 w-full max-w-md rounded-[var(--radius-lg)] border border-border bg-felt-deep/50 px-4 py-4 text-left">
+          <p className="text-[0.7rem] uppercase tracking-[0.16em] text-ivory/70">Pit seat</p>
+          <p className="mt-2 text-sm leading-relaxed text-muted">
+            Signed-in play chips on a server ledger. The hole stays off the
+            wire. Not a licensed casino. No real money.
+          </p>
+          <label className="mt-3 flex items-start gap-2 text-sm text-ivory">
+            <input
+              type="checkbox"
+              className="mt-1"
+              checked={ageOk}
+              onChange={(e) => setAgeOk(e.target.checked)}
+            />
+            <span>I am 18 or older. These chips are not money.</span>
+          </label>
+          {isPending ? (
+            <div className="mt-3 h-11 animate-pulse rounded-[var(--radius-md)] bg-fg/10" />
+          ) : user ? (
+            <Button
+              className="mt-3 w-full"
+              variant="outline"
+              disabled={!ageOk || pitBusy}
+              onClick={() => {
+                unlockAudio();
+                void openPit();
+              }}
+            >
+              Open pit seat
+            </Button>
+          ) : (
+            <Button asChild className="mt-3 w-full" variant="outline" disabled={!ageOk}>
+              <Link to="/login">Sign in for a pit seat</Link>
+            </Button>
+          )}
+        </div>
         <p className="mt-6 max-w-sm font-mono text-[0.65rem] leading-relaxed tracking-wide text-muted">
           Enter deal · H hit · S stand · D double · P split · R surrender · C count · A coach
         </p>
@@ -113,9 +156,21 @@ export function Table() {
     <div className="felt-wash flex min-h-dvh flex-col">
       <Hud onOpenSettings={() => setSettings(true)} onOpenStats={() => setStats(true)} />
 
+      {mode === "pit" && (
+        <p className="px-4 text-center text-[0.65rem] uppercase tracking-[0.14em] text-muted">
+          Play chips only. Not a licensed gambling product.
+        </p>
+      )}
+      {realityCheck && mode === "pit" && (
+        <p className="px-4 text-center text-sm text-ivory">
+          Reality check — you have been seated more than 45 minutes.
+        </p>
+      )}
+
       <main className="relative mx-auto flex w-full max-w-5xl flex-1 flex-col justify-between gap-4 px-3 py-4 sm:px-6">
         <section className="table-rail rounded-[var(--radius-xl)] px-2 py-6 sm:px-8 sm:py-8">
           <p className="kicker mb-4 text-center">
+            {mode === "pit" ? "Pit · play chips only · not licensed · " : ""}
             {soft17 ? "Dealer hits soft 17" : "Dealer stands on soft 17"}
             {autoplay ? " · Coach is playing" : ""}
           </p>

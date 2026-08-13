@@ -12,7 +12,8 @@ function Login() {
           <p className="text-[0.7rem] uppercase tracking-[0.18em] text-muted">Blackjack Pro</p>
           <h1 className="mt-1 font-display text-2xl text-ivory">Sign in</h1>
           <p className="mt-2 text-sm text-muted">
-            Optional. The table plays as a guest; sign in to keep an identity on this device.
+            Required for a pit seat. Practice still plays as a guest. Pit chips
+            are not money.
           </p>
         </div>
         {authEnabled ? (

@@ -35,6 +35,14 @@ export function SettingsPanel({
   const setShowCount = useTable((s) => s.setShowCount);
   const setSoft17 = useTable((s) => s.setSoft17);
   const newSession = useTable((s) => s.newSession);
+  const mode = useTable((s) => s.mode);
+  const refillPit = useTable((s) => s.refillPit);
+  const setLossLimit = useTable((s) => s.setLossLimit);
+  const cooloff = useTable((s) => s.cooloff);
+  const selfExclude = useTable((s) => s.selfExclude);
+  const lossLimit = useTable((s) => s.lossLimit);
+  const seedCommit = useTable((s) => s.seedCommit);
+  const seedReveal = useTable((s) => s.seedReveal);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange} title="Table">
@@ -117,8 +125,55 @@ export function SettingsPanel({
             onOpenChange(false);
           }}
         >
-          New session · $1,000
+          {mode === "pit" ? "Void the live box" : "New session · $1,000"}
         </Button>
+
+        {mode === "pit" && (
+          <section className="space-y-3 border-t border-border pt-4">
+            <h3 className="text-[0.7rem] uppercase tracking-[0.16em] text-muted">Pit rails</h3>
+            <p className="text-xs leading-relaxed text-muted">
+              Play chips. Loss limit, cool-off, and self-exclude are enforced on
+              the server. They are not a substitute for a licensed RG programme.
+            </p>
+            {seedCommit && (
+              <p className="break-all font-mono text-[0.6rem] text-muted">
+                Shoe commit {seedCommit.slice(0, 16)}…
+                {seedReveal ? ` · last seed ${seedReveal.slice(0, 12)}…` : ""}
+              </p>
+            )}
+            <div className="flex flex-wrap gap-2">
+              {[0, 100, 250, 500].map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setLossLimit(n)}
+                  className={cn(
+                    "h-11 rounded-[var(--radius-sm)] border px-3 text-xs",
+                    lossLimit === n ? "border-ivory/40 text-ivory" : "border-border text-muted",
+                  )}
+                >
+                  {n === 0 ? "No loss cap" : `Cap $${n}`}
+                </button>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" className="h-11 rounded-[var(--radius-sm)] border border-border px-3 text-xs text-muted" onClick={() => cooloff(1)}>
+                Cool-off 1h
+              </button>
+              <button type="button" className="h-11 rounded-[var(--radius-sm)] border border-border px-3 text-xs text-muted" onClick={() => cooloff(24)}>
+                Cool-off 24h
+              </button>
+              <button type="button" className="h-11 rounded-[var(--radius-sm)] border border-border px-3 text-xs text-muted" onClick={() => selfExclude(7)}>
+                Exclude 7d
+              </button>
+            </div>
+            {snap.bankroll === 0 && snap.pendingBet === 0 && (
+              <Button variant="outline" className="w-full" onClick={() => refillPit()}>
+                Bust refill · $1,000 play chips
+              </Button>
+            )}
+          </section>
+        )}
       </div>
     </Sheet>
   );

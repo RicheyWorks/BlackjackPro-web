@@ -12,6 +12,9 @@ import { settlePlus3, type Plus3Result } from "@/lib/blackjack/plus3";
 import { chooseCountBet } from "@/lib/blackjack/deviations";
 import { appendTape, type TapeMark } from "@/lib/blackjack/tape";
 import { nextAutoStep } from "@/lib/blackjack/autoplay";
+import { tableAction } from "@/lib/casino/api";
+import { viewToSnap } from "@/lib/casino/view";
+import type { PitOp, PitView } from "@/lib/casino/types";
 import { isTableChip, TABLE_MAX, TABLE_MIN } from "@/lib/blackjack/money";
 import { sfx } from "@/lib/blackjack/sfx";
 
@@ -44,7 +47,18 @@ interface TableState {
   countStake: number;
   mix: ShoeMix;
   autoplay: boolean;
+  mode: "practice" | "pit";
+  pitBusy: boolean;
+  seedCommit: string | null;
+  seedReveal: string | null;
+  realityCheck: boolean;
+  lossLimit: number;
   seat: () => void;
+  openPit: () => Promise<void>;
+  refillPit: () => void;
+  setLossLimit: (amount: number) => void;
+  cooloff: (hours: number) => void;
+  selfExclude: (days: number) => void;
   addChip: (n: number) => void;
   setBetRail: (r: BetRail) => void;
   clearBet: () => void;
@@ -74,8 +88,22 @@ let engine = new Engine(STARTING_BANKROLL);
 let settings: SaveData = defaultSave();
 let plus3Pending = 0;
 let plus3Last: Plus3Result | null = null;
+let tableMode: "practice" | "pit" = "practice";
+let pitLock = false;
 
 function persist(): void {
+  if (tableMode === "pit") {
+    writeSave({
+      ...settings,
+      bankroll: settings.bankroll,
+      stats: settings.stats,
+      pendingBet: 0,
+      plus3Pending: 0,
+      inPlay: 0,
+      live: null,
+    });
+    return;
+  }
   writeSave({
     ...settings,
     bankroll: engine.bankroll,
@@ -243,6 +271,58 @@ export const useTable = create<TableState>((set, get) => {
     if (!autoActing) haltAuto();
   };
 
+  const applyPit = (view: PitView, extra: Partial<TableState> = {}) => {
+    tableMode = "pit";
+    plus3Pending = view.plus3Pending;
+    plus3Last = view.plus3Last;
+    set({
+      rev: get().rev + 1,
+      mode: "pit",
+      seated: true,
+      snap: viewToSnap(view),
+      plus3Pending: view.plus3Pending,
+      plus3Last: view.plus3Last,
+      lastMainBet: view.lastMainBet,
+      lastPlus3Bet: view.lastPlus3Bet,
+      canRebet: view.canRebet,
+      tape: view.tape,
+      running: view.running,
+      trueCount: view.trueCount,
+      countStake: view.countStake,
+      mix: view.mix,
+      soft17: view.soft17,
+      seedCommit: view.seedCommit,
+      seedReveal: view.seedReveal,
+      realityCheck: view.realityCheck,
+      lossLimit: view.lossLimit,
+      pitBusy: false,
+      ...extra,
+    });
+    persist();
+  };
+
+  const runPit = async (op: PitOp) => {
+    if (pitLock) return;
+    pitLock = true;
+    set({ pitBusy: true });
+    try {
+      const view = await tableAction({ data: op });
+      applyPit(view);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Pit error";
+      set({ toast: msg, pitBusy: false });
+    } finally {
+      pitLock = false;
+    }
+  };
+
+  const ifPit = (op: PitOp): boolean => {
+    if (tableMode !== "pit") return false;
+    fromUser();
+    void runPit(op);
+    return true;
+  };
+
   const bumpAuto = () => {
     if (autoTimer !== null) {
       clearTimeout(autoTimer);
@@ -340,6 +420,12 @@ export const useTable = create<TableState>((set, get) => {
     countStake: chooseCountBet(counter.trueCount(engine.shoe.remaining()), engine.bankroll, engine.pendingBet),
     mix: shoeMix(engine.shoe.decks, counter),
     autoplay: false,
+    mode: "practice",
+    pitBusy: false,
+    seedCommit: null,
+    seedReveal: null,
+    realityCheck: false,
+    lossLimit: 0,
 
     seat() {
       set({
@@ -352,11 +438,43 @@ export const useTable = create<TableState>((set, get) => {
       });
     },
 
+    async openPit() {
+      haltAuto();
+      try {
+        const view = await tableAction({ data: { op: "seat", ageAttest: true } });
+        applyPit(view, { chatter: lineFor(settings.theme, "sit") });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Pit error";
+        set({ toast: msg });
+      }
+    },
+
+    refillPit() {
+      if (tableMode !== "pit") return;
+      void runPit({ op: "refill" });
+    },
+
+    setLossLimit(amount) {
+      if (tableMode !== "pit") return;
+      void runPit({ op: "setLossLimit", amount });
+    },
+
+    cooloff(hours) {
+      if (tableMode !== "pit") return;
+      void runPit({ op: "cooloff", hours: hours as 1 | 24 | 72 });
+    },
+
+    selfExclude(days) {
+      if (tableMode !== "pit") return;
+      void runPit({ op: "selfExclude", days: days as 1 | 7 | 30 });
+    },
+
     setBetRail(r) {
       set({ betRail: r });
     },
 
     addChip(n) {
+      if (ifPit({ op: "addChip", n, rail: get().betRail })) return;
       fromUser();
       if (engine.phase !== "BETTING" || !isTableChip(n) || engine.bankroll < n) return;
       const rail = get().betRail;
@@ -373,6 +491,7 @@ export const useTable = create<TableState>((set, get) => {
     },
 
     clearBet() {
+      if (ifPit({ op: "clearBet" })) return;
       fromUser();
       engine.clearBet();
       if (plus3Pending > 0) {
@@ -383,6 +502,11 @@ export const useTable = create<TableState>((set, get) => {
     },
 
     rebet() {
+      if (tableMode === "pit") {
+        fromUser();
+        void runPit({ op: "rebet" });
+        return true;
+      }
       fromUser();
       if (!placeRebet()) return false;
       if (settings.sound) sfx.chip();
@@ -391,6 +515,7 @@ export const useTable = create<TableState>((set, get) => {
     },
 
     rebetDeal() {
+      if (ifPit({ op: "rebetDeal" })) return;
       fromUser();
       if (engine.canDeal) {
         get().deal();
@@ -402,6 +527,7 @@ export const useTable = create<TableState>((set, get) => {
     },
 
     countBet() {
+      if (ifPit({ op: "countBet" })) return;
       fromUser();
       if (engine.phase !== "BETTING") return;
       const target = chooseCountBet(
@@ -420,6 +546,7 @@ export const useTable = create<TableState>((set, get) => {
     },
 
     deal() {
+      if (ifPit({ op: "deal" })) return;
       fromUser();
       if (!engine.canDeal) return;
       const before = engine.shoe.needsShuffle();
@@ -455,6 +582,7 @@ export const useTable = create<TableState>((set, get) => {
     },
 
     hit() {
+      if (ifPit({ op: "hit" })) return;
       fromUser();
       if (!engine.canHit) return;
       engine.hit();
@@ -468,6 +596,7 @@ export const useTable = create<TableState>((set, get) => {
     },
 
     stand() {
+      if (ifPit({ op: "stand" })) return;
       fromUser();
       if (!engine.canStand) return;
       engine.stand();
@@ -480,6 +609,7 @@ export const useTable = create<TableState>((set, get) => {
     },
 
     double() {
+      if (ifPit({ op: "double" })) return;
       fromUser();
       if (!engine.canDouble) return;
       engine.doubleDown();
@@ -493,6 +623,7 @@ export const useTable = create<TableState>((set, get) => {
     },
 
     split() {
+      if (ifPit({ op: "split" })) return;
       fromUser();
       if (!engine.canSplit) return;
       engine.split();
@@ -505,6 +636,7 @@ export const useTable = create<TableState>((set, get) => {
     },
 
     surrender() {
+      if (ifPit({ op: "surrender" })) return;
       fromUser();
       if (!engine.canSurrender) return;
       engine.surrender();
@@ -513,6 +645,7 @@ export const useTable = create<TableState>((set, get) => {
     },
 
     insure(yes) {
+      if (ifPit({ op: "insure", yes })) return;
       fromUser();
       if (engine.phase !== "INSURANCE") return;
       const natural = engine.player[0] ? isBlackjack(engine.player[0]) : false;
@@ -555,6 +688,10 @@ export const useTable = create<TableState>((set, get) => {
     },
 
     setSoft17(v) {
+      if (ifPit({ op: "setSoft17", v })) {
+        set({ soft17: v });
+        return;
+      }
       if (engine.phase !== "BETTING") return;
       settings.dealerHitsSoft17 = v;
       engine.rules.dealerHitsSoft17 = v;
@@ -623,6 +760,10 @@ export const useTable = create<TableState>((set, get) => {
 
     newSession() {
       haltAuto();
+      if (tableMode === "pit") {
+        void runPit({ op: "newSession" });
+        return;
+      }
       engine.newSession(STARTING_BANKROLL);
       resetCount();
       plus3Pending = 0;

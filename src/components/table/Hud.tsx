@@ -18,6 +18,7 @@ export function Hud({
   const countStake = useTable((s) => s.countStake);
   const chatter = useTable((s) => s.chatter);
   const autoplay = useTable((s) => s.autoplay);
+  const mode = useTable((s) => s.mode);
   const { user, isPending } = useCurrentUserState();
 
   return (
@@ -26,7 +27,9 @@ export function Hud({
         <p className="font-display text-xl tracking-tight text-ivory sm:text-2xl">
           Blackjack Pro
         </p>
-        <p className="kicker mt-0.5">6-deck · 3:2 · $5–$500</p>
+        <p className="kicker mt-0.5">
+          {mode === "pit" ? "Pit · play chips · 6-deck · 3:2" : "6-deck · 3:2 · $5–$500"}
+        </p>
       </div>
 
       <div className="flex flex-wrap items-center justify-end gap-2">

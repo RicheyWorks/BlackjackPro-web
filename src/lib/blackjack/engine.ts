@@ -458,6 +458,10 @@ export class Engine {
     return true;
   }
 
+  roundFigures(): { wagered: number; returned: number; net: number } {
+    return { wagered: this.roundWagered, returned: this.roundReturned, net: this.lastNet };
+  }
+
   snapshot(): EngineSnapshot {
     return {
       phase: this.phase,

@@ -4,6 +4,8 @@ Browser port of [RicheyWorks/BlackJackPro](https://github.com/RicheyWorks/BlackJ
 
 Sit down, buy the $5–$500 box, and play. Optional 21+3. Optional Hi-Lo. Optional coach that bets the ramp and acts the Illustrious 18 for you.
 
+Two seats: a **practice table** (local, anyone can edit the save) and a signed-in **pit seat** (server ledger, hole card off the wire, play chips only). This is not a licensed casino and it does not take real money. The remaining work to become one is in [CASINO.md](./CASINO.md).
+
 ## House rules
 
 | | |

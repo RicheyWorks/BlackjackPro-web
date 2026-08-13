@@ -1,0 +1,131 @@
+import { describe, it } from "node:test";
+import assert from "node:assert/strict";
+import { Engine } from "@/lib/blackjack/engine";
+import { createRules } from "@/lib/blackjack/rules";
+import { HiLoCounter } from "@/lib/blackjack/hilo";
+import { redactDealer } from "./redact";
+import { parseOp } from "./parse";
+import { applyOp } from "./apply";
+import { dumpSession, parseBlob, type PitSession } from "./session";
+import { buildShuffledShoe, commitSeed, hmacIndex, newSeed } from "./rng.server";
+import type { Card, Rank, Suit } from "@/lib/blackjack/types";
+
+function session(bank = 1000): PitSession {
+  const seed = newSeed();
+  const engine = new Engine(bank, createRules({ dealerHitsSoft17: false }));
+  engine.shoe.load(buildShuffledShoe(6, seed, 0.75));
+  return {
+    engine,
+    plus3Pending: 0,
+    plus3Last: null,
+    lastMainBet: 0,
+    lastPlus3Bet: 0,
+    plus3: { wagered: 0, returned: 0, wins: 0 },
+    tape: [],
+    seed,
+    seedCommit: commitSeed(seed),
+    prevSeedReveal: null,
+    handId: null,
+    counter: new HiLoCounter(),
+    seen: new Set(),
+    version: 1,
+    sessionAnchor: bank,
+    sessionStartedAt: Date.now(),
+  };
+}
+
+function card(id: number, rank: Rank, suit: Suit = "spades"): Card {
+  return { id, rank, suit };
+}
+
+const hooks = {
+  reshuffle: (s: PitSession) => {
+    s.prevSeedReveal = s.seed;
+    s.seed = newSeed();
+    s.seedCommit = commitSeed(s.seed);
+    s.engine.shoe.load(buildShuffledShoe(6, s.seed, 0.75));
+    s.counter.reset();
+    s.seen.clear();
+  },
+  newHandId: () => "hand-test",
+};
+
+describe("casino rng", () => {
+  it("commits a 32-byte seed and shuffles deterministically", () => {
+    const seed = "ab".repeat(32);
+    assert.equal(commitSeed(seed).length, 64);
+    const a = buildShuffledShoe(1, seed, 0.75);
+    const b = buildShuffledShoe(1, seed, 0.75);
+    assert.deepEqual(a.cards.map((c) => c.id), b.cards.map((c) => c.id));
+    assert.equal(a.cards.length, 52);
+  });
+
+  it("hmacIndex stays in range", () => {
+    const seed = newSeed();
+    for (let i = 1; i < 40; i++) {
+      const j = hmacIndex(seed, i, i);
+      assert.ok(j >= 0 && j < i);
+    }
+  });
+});
+
+describe("casino redact", () => {
+  it("drops the hole while the player is acting", () => {
+    const dealer = {
+      cards: [card(1, "A"), card(2, "K")],
+      bet: 0,
+      doubled: false,
+      surrendered: false,
+      fromSplit: false,
+      splitAce: false,
+      stood: false,
+    };
+    const hidden = redactDealer(dealer, "PLAYER");
+    assert.equal(hidden.cards.length, 1);
+    assert.equal(hidden.cards[0]!.rank, "A");
+    assert.equal(redactDealer(dealer, "BETTING").cards.length, 2);
+  });
+});
+
+describe("casino parse", () => {
+  it("rejects junk", () => {
+    assert.throws(() => parseOp({ op: "explode" }));
+    assert.throws(() => parseOp({ op: "addChip", n: 7, rail: "main" }));
+    assert.throws(() => parseOp({ op: "seat" }));
+    assert.equal(parseOp({ op: "seat", ageAttest: true }).op, "seat");
+  });
+});
+
+describe("casino apply", () => {
+  it("deals from the server engine and settles a natural", () => {
+    const s = session();
+    applyOp(s, { op: "addChip", n: 25, rail: "main" }, hooks);
+    assert.equal(s.engine.pendingBet, 25);
+    assert.equal(s.engine.bankroll, 975);
+    const shoe = s.engine.shoe as unknown as { cards: Card[]; nextId: number };
+    const order: Card[] = [card(31, "A"), card(32, "9"), card(33, "10"), card(34, "6")];
+    shoe.cards.push(...[...order].reverse());
+    applyOp(s, { op: "deal" }, hooks);
+    assert.equal(s.engine.phase, "BETTING");
+    assert.deepEqual(s.engine.lastOutcomes, ["BLACKJACK"]);
+    assert.equal(s.engine.bankroll, 975 + 25 + 38);
+  });
+
+  it("round-trips a live snapshot without refunding the box", () => {
+    const s = session();
+    applyOp(s, { op: "addChip", n: 25, rail: "main" }, hooks);
+    const shoe = s.engine.shoe as unknown as { cards: Card[] };
+    const order: Card[] = [card(41, "10"), card(42, "10"), card(43, "6"), card(44, "9")];
+    shoe.cards.push(...[...order].reverse());
+    applyOp(s, { op: "deal" }, hooks);
+    assert.equal(s.engine.phase, "PLAYER");
+    const cash = s.engine.bankroll;
+    const blob = JSON.stringify(dumpSession(s));
+    const restored = parseBlob(blob, cash, 2);
+    assert.ok(restored);
+    assert.equal(restored!.engine.phase, "PLAYER");
+    assert.equal(restored!.engine.bankroll, cash);
+    assert.equal(restored!.engine.player[0]!.bet, 25);
+    assert.equal(restored!.engine.canHit, true);
+  });
+});

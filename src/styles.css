@@ -1,0 +1,266 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@theme {
+  --font-display: "Fraunces", "Times New Roman", serif;
+  --font-sans: "Outfit", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  --color-bg: var(--felt);
+  --color-surface: var(--felt-deep);
+  --color-felt: var(--felt);
+  --color-felt-mid: var(--felt-mid);
+  --color-felt-deep: var(--felt-deep);
+  --color-ivory: var(--ivory);
+  --color-fg: var(--ink-cream);
+  --color-muted: var(--ink-mute);
+  --color-primary: var(--ivory);
+  --color-primary-fg: var(--felt-deep);
+  --color-border: var(--rail);
+  --color-card: var(--card-face);
+  --color-card-fg: var(--card-ink);
+  --color-suit-red: var(--suit-red);
+  --color-chip-1: var(--chip-1);
+  --color-chip-5: var(--chip-5);
+  --color-chip-25: var(--chip-25);
+  --color-chip-100: var(--chip-100);
+  --color-chip-500: var(--chip-500);
+
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius: 12px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+}
+
+@layer base {
+  :root,
+  [data-theme="midnight"] {
+    --felt: #101612;
+    --felt-mid: #162019;
+    --felt-deep: #0b0f0c;
+    --rail: color-mix(in oklab, #e8e4db 14%, transparent);
+    --ivory: #e8e4db;
+    --ink-cream: #efece4;
+    --ink-mute: #9a9b93;
+    --card-face: #f4efe6;
+    --card-ink: #1a1c19;
+    --card-back: #1c2620;
+    --suit-red: #8f3d3d;
+    --chip-1: #c9c4b8;
+    --chip-5: #4d5a52;
+    --chip-25: #6e3a3a;
+    --chip-100: #2c3a48;
+    --chip-500: #1f1f1c;
+  }
+
+  [data-theme="abyss"] {
+    --felt: #0d1618;
+    --felt-mid: #122022;
+    --felt-deep: #081011;
+    --rail: color-mix(in oklab, #d7e4e2 14%, transparent);
+    --ivory: #d7e4e2;
+    --ink-cream: #e4eeec;
+    --ink-mute: #8ea09e;
+    --card-face: #eef3f1;
+    --card-ink: #152022;
+    --card-back: #163033;
+    --suit-red: #8a4548;
+    --chip-1: #c5d0ce;
+    --chip-5: #3d5556;
+    --chip-25: #6a4044;
+    --chip-100: #24424a;
+    --chip-500: #141c1d;
+  }
+
+  [data-theme="crimson"] {
+    --felt: #1a1214;
+    --felt-mid: #24181b;
+    --felt-deep: #100c0d;
+    --rail: color-mix(in oklab, #eadfd8 14%, transparent);
+    --ivory: #eadfd8;
+    --ink-cream: #f3ebe5;
+    --ink-mute: #a89790;
+    --card-face: #f6eee8;
+    --card-ink: #201416;
+    --card-back: #2a181c;
+    --suit-red: #8a3538;
+    --chip-1: #d2c6be;
+    --chip-5: #5a4548;
+    --chip-25: #7a3538;
+    --chip-100: #3a2a30;
+    --chip-500: #181214;
+  }
+
+  [data-theme="glacier"] {
+    --felt: #12151a;
+    --felt-mid: #191d24;
+    --felt-deep: #0c0e12;
+    --rail: color-mix(in oklab, #dfe4ea 14%, transparent);
+    --ivory: #dfe4ea;
+    --ink-cream: #eceff3;
+    --ink-mute: #8e96a2;
+    --card-face: #f2f4f7;
+    --card-ink: #16181c;
+    --card-back: #222833;
+    --suit-red: #7e4448;
+    --chip-1: #c9ced6;
+    --chip-5: #4a5360;
+    --chip-25: #6c4548;
+    --chip-100: #2c3848;
+    --chip-500: #14161a;
+  }
+
+  [data-theme="classic"] {
+    --felt: #132018;
+    --felt-mid: #1a2a20;
+    --felt-deep: #0c1410;
+    --rail: color-mix(in oklab, #e6e2d6 14%, transparent);
+    --ivory: #e6e2d6;
+    --ink-cream: #f0ece2;
+    --ink-mute: #96a094;
+    --card-face: #f7f3ea;
+    --card-ink: #161a16;
+    --card-back: #1c2c22;
+    --suit-red: #8b3a3a;
+    --chip-1: #ccc8bc;
+    --chip-5: #3e5546;
+    --chip-25: #6e3c3c;
+    --chip-100: #2a3c48;
+    --chip-500: #161814;
+  }
+
+  html,
+  body {
+    min-height: 100%;
+    background: var(--felt-deep);
+    color: var(--ink-cream);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  * {
+    border-color: var(--rail);
+  }
+}
+
+@layer components {
+  .felt-wash {
+    background:
+      radial-gradient(120% 80% at 50% 40%, var(--felt-mid) 0%, transparent 58%),
+      var(--felt);
+  }
+
+  .table-rail {
+    box-shadow:
+      inset 0 0 0 1px var(--rail),
+      inset 0 0 80px color-mix(in oklab, var(--felt-deep) 55%, transparent);
+  }
+
+  .playing-card {
+    width: 4.5rem;
+    height: 6.35rem;
+    border-radius: 0.55rem;
+    background: var(--card-face);
+    color: var(--card-ink);
+    box-shadow:
+      0 8px 18px color-mix(in oklab, black 28%, transparent),
+      inset 0 0 0 1px color-mix(in oklab, var(--card-ink) 10%, transparent);
+  }
+
+  .playing-card-back {
+    background:
+      repeating-linear-gradient(
+        135deg,
+        color-mix(in oklab, var(--ivory) 10%, var(--card-back)) 0 6px,
+        var(--card-back) 6px 12px
+      );
+    box-shadow:
+      0 8px 18px color-mix(in oklab, black 28%, transparent),
+      inset 0 0 0 1px color-mix(in oklab, var(--ivory) 18%, transparent);
+  }
+
+  @media (min-width: 768px) {
+    .playing-card {
+      width: 5.4rem;
+      height: 7.6rem;
+    }
+  }
+
+  .chip {
+    width: 3.25rem;
+    height: 3.25rem;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    box-shadow:
+      0 6px 12px color-mix(in oklab, black 30%, transparent),
+      inset 0 0 0 3px color-mix(in oklab, white 18%, transparent),
+      inset 0 0 0 5px color-mix(in oklab, black 25%, transparent);
+  }
+
+  @media (min-width: 768px) {
+    .chip {
+      width: 3.6rem;
+      height: 3.6rem;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) rotate(-4deg);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) rotate(var(--tilt, 0deg));
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.anim-card {
+  animation: card-in 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.anim-rise {
+  animation: rise 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}

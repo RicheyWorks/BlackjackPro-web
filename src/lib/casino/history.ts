@@ -86,3 +86,45 @@ export function handProof(hand: {
     `wagered ${hand.wagered} returned ${hand.returned} net ${hand.net}`,
   ].join("\n");
 }
+
+export function ledgerExport(input: {
+  rulesPack: string | null;
+  rulesHash: string | null;
+  pit: { hands: number; wagered: number; returned: number; net: number; rtp: number | null; voids: number } | null;
+  hands: Array<{
+    id: string;
+    startedAt: string;
+    settledAt: string | null;
+    status: string;
+    outcomes: string;
+    mainBet: number;
+    plus3Bet: number;
+    insuranceBet: number;
+    wagered: number;
+    returned: number;
+    net: number;
+    seedCommit: string;
+    seedReveal: string | null;
+    seedOk: boolean | null;
+    rulesPack: string;
+    rulesHash: string;
+    actions: string[];
+  }>;
+  wallet: Array<{ amount: number; balanceAfter: number; kind: string; at: string }>;
+}): string {
+  return `${JSON.stringify(
+    {
+      product: "Blackjack Pro",
+      playChips: true,
+      licensed: false,
+      exportedAt: new Date().toISOString(),
+      rulesPack: input.rulesPack,
+      rulesHash: input.rulesHash,
+      pit: input.pit,
+      hands: input.hands,
+      wallet: input.wallet,
+    },
+    null,
+    2,
+  )}\n`;
+}

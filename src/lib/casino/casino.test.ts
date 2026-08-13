@@ -5,7 +5,7 @@ import { createRules } from "@/lib/blackjack/rules";
 import { HiLoCounter } from "@/lib/blackjack/hilo";
 import { redactDealer } from "./redact";
 import { settlePlus3 } from "@/lib/blackjack/plus3";
-import { parseDealerJson, parseHandsJson, groupActions, sanitizeAction, handProof } from "./history";
+import { parseDealerJson, parseHandsJson, groupActions, sanitizeAction, handProof, ledgerExport } from "./history";
 import { parseDevice, parseOp } from "./parse";
 import { applyOp } from "./apply";
 import { dumpSession, parseBlob, type PitSession } from "./session";
@@ -315,6 +315,19 @@ describe("casino phase 2", () => {
     assert.match(text, /commit/);
     assert.match(text, /reveal pending/);
     assert.doesNotMatch(text, /live seed/);
+  });
+
+  it("exports a play-chip ledger without claiming a license", () => {
+    const raw = ledgerExport({
+      rulesPack: "6D S17",
+      rulesHash: "abc",
+      pit: { hands: 1, wagered: 25, returned: 50, net: 25, rtp: 2, voids: 0 },
+      hands: [],
+      wallet: [{ amount: 1000, balanceAfter: 1000, kind: "grant", at: "t" }],
+    });
+    const j = JSON.parse(raw) as { licensed: boolean; playChips: boolean };
+    assert.equal(j.licensed, false);
+    assert.equal(j.playChips, true);
   });
 });
 

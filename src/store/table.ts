@@ -100,6 +100,7 @@ let plus3Pending = 0;
 let plus3Last: Plus3Result | null = null;
 let tableMode: "practice" | "pit" = "practice";
 let pitLock = false;
+let capWarned = false;
 
 function persist(): void {
   if (tableMode === "pit") {
@@ -285,6 +286,16 @@ export const useTable = create<TableState>((set, get) => {
     tableMode = "pit";
     plus3Pending = view.plus3Pending;
     plus3Last = view.plus3Last;
+    if (view.lossLimit > 0) {
+      const used = Math.max(0, -view.sessionNet);
+      if (used >= view.lossLimit * 0.8 && used < view.lossLimit && !capWarned) {
+        capWarned = true;
+        extra = { toast: extra.toast ?? "Near your loss cap.", ...extra };
+      }
+      if (used < view.lossLimit * 0.5) capWarned = false;
+    } else {
+      capWarned = false;
+    }
     set({
       rev: get().rev + 1,
       mode: "pit",

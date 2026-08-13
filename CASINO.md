@@ -73,6 +73,7 @@ Practice mode stays. It never writes the pit ledger.
 - Cash tape (grant / wager / payout) plus the action strip on each hand.
 - Seat clock, reality check with time / hands / net, copy-proof on a settled hand.
 - Loss-cap remaining on the rail. In-browser hash of a pasted reveal against the last commit.
+- Cool-off / exclude / void take a second tap. Ledger downloads as JSON.
 - Pit seat bound to the browser that opened it.
 - HMAC shoe shuffle is still play-chip grade — a lab will name the seeder later.
 

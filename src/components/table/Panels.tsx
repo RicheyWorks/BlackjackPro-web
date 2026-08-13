@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import { fetchHands, fetchPitStats, fetchWallet } from "@/lib/casino/api";
 import type { HandRow, LedgerRow, PitStats } from "@/lib/casino/types";
 import { TABLE_MIN } from "@/lib/blackjack/money";
-import { handProof } from "@/lib/casino/history";
+import { handProof, ledgerExport } from "@/lib/casino/history";
 import { formatSeated } from "@/lib/casino/reality";
 import { commitFromSeed, isSeedHex } from "@/lib/casino/verify";
 import { PlayingCard } from "./PlayingCard";
@@ -59,6 +59,17 @@ export function SettingsPanel({
   const selfExcludedUntil = useTable((s) => s.selfExcludedUntil);
   const sessionNet = useTable((s) => s.sessionNet);
   const rulesPack = useTable((s) => s.rulesPack);
+  const [pendingRail, setPendingRail] = useState<string | null>(null);
+
+  const askRail = (id: string, run: () => void) => {
+    if (pendingRail === id) {
+      run();
+      setPendingRail(null);
+      return;
+    }
+    setPendingRail(id);
+    window.setTimeout(() => setPendingRail((p) => (p === id ? null : p)), 4000);
+  };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange} title="Table">
@@ -137,11 +148,22 @@ export function SettingsPanel({
           variant="ghost"
           className="w-full"
           onClick={() => {
+            if (mode === "pit") {
+              askRail("void", () => {
+                newSession();
+                onOpenChange(false);
+              });
+              return;
+            }
             newSession();
             onOpenChange(false);
           }}
         >
-          {mode === "pit" ? "Void the live box" : "New session · $1,000"}
+          {mode === "pit"
+            ? pendingRail === "void"
+              ? "Tap again to void"
+              : "Void the live box"
+            : "New session · $1,000"}
         </Button>
 
         {mode === "pit" && (
@@ -198,14 +220,14 @@ export function SettingsPanel({
               ))}
             </div>
             <div className="flex flex-wrap gap-2">
-              <button type="button" className="h-11 rounded-[var(--radius-sm)] border border-border px-3 text-xs text-muted" onClick={() => cooloff(1)}>
-                Cool-off 1h
+              <button type="button" className="h-11 rounded-[var(--radius-sm)] border border-border px-3 text-xs text-muted" onClick={() => askRail("c1", () => cooloff(1))}>
+                {pendingRail === "c1" ? "Confirm 1h" : "Cool-off 1h"}
               </button>
-              <button type="button" className="h-11 rounded-[var(--radius-sm)] border border-border px-3 text-xs text-muted" onClick={() => cooloff(24)}>
-                Cool-off 24h
+              <button type="button" className="h-11 rounded-[var(--radius-sm)] border border-border px-3 text-xs text-muted" onClick={() => askRail("c24", () => cooloff(24))}>
+                {pendingRail === "c24" ? "Confirm 24h" : "Cool-off 24h"}
               </button>
-              <button type="button" className="h-11 rounded-[var(--radius-sm)] border border-border px-3 text-xs text-muted" onClick={() => selfExclude(7)}>
-                Exclude 7d
+              <button type="button" className="h-11 rounded-[var(--radius-sm)] border border-border px-3 text-xs text-muted" onClick={() => askRail("x7", () => selfExclude(7))}>
+                {pendingRail === "x7" ? "Confirm exclude" : "Exclude 7d"}
               </button>
             </div>
             {snap.bankroll + snap.pendingBet + plus3Pending < TABLE_MIN && (
@@ -296,6 +318,32 @@ export function StatsPanel({
               {(rulesHash ?? pit.rulesHash) ? ` · ${(rulesHash ?? pit.rulesHash).slice(0, 12)}…` : ""}
             </p>
           )}
+          <Button
+            variant="outline"
+            className="mt-4 w-full"
+            onClick={() => {
+              const blob = new Blob(
+                [
+                  ledgerExport({
+                    rulesPack: rulesPack ?? pit.rulesPack,
+                    rulesHash: rulesHash ?? pit.rulesHash,
+                    pit,
+                    hands,
+                    wallet,
+                  }),
+                ],
+                { type: "application/json" },
+              );
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = "blackjack-pro-ledger.json";
+              a.click();
+              URL.revokeObjectURL(url);
+            }}
+          >
+            Download ledger
+          </Button>
         </section>
       )}
       {mode === "pit" && wallet.length > 0 && (

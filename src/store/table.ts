@@ -17,7 +17,9 @@ import { pitDevice } from "@/lib/casino/device";
 import { viewToSnap } from "@/lib/casino/view";
 import type { PitOp, PitView } from "@/lib/casino/types";
 import { isTableChip, TABLE_MAX, TABLE_MIN } from "@/lib/blackjack/money";
+import { formatSeated } from "@/lib/casino/reality";
 import { sfx } from "@/lib/blackjack/sfx";
+import { dollars } from "@/lib/utils";
 
 export type BetRail = "main" | "plus3";
 
@@ -58,7 +60,9 @@ interface TableState {
   sessionStartedAt: number;
   sessionNet: number;
   lastRealityAckAt: number;
+  lastRecap: string | null;
   leaveTable: () => void;
+  enterPractice: () => void;
   lossLimit: number;
   cooloffUntil: string | null;
   selfExcludedUntil: string | null;
@@ -103,6 +107,7 @@ let plus3Last: Plus3Result | null = null;
 let tableMode: "practice" | "pit" = "practice";
 let pitLock = false;
 let capWarned = false;
+let practiceHold: { plus3Pending: number; plus3Last: Plus3Result | null } | null = null;
 
 function persist(): void {
   if (tableMode === "pit") {
@@ -329,6 +334,7 @@ export const useTable = create<TableState>((set, get) => {
       rulesPack: view.rulesPack,
       rulesHash: view.rulesHash,
       pitBusy: false,
+      lastRecap: null,
       ...extra,
     });
     persist();
@@ -464,6 +470,7 @@ export const useTable = create<TableState>((set, get) => {
     sessionStartedAt: 0,
     sessionNet: 0,
     lastRealityAckAt: 0,
+    lastRecap: null,
     lossLimit: 0,
     cooloffUntil: null,
     selfExcludedUntil: null,
@@ -483,11 +490,40 @@ export const useTable = create<TableState>((set, get) => {
 
     leaveTable() {
       haltAuto();
-      set({ seated: false, autoplay: false });
+      const st = get();
+      const seatedMs =
+        st.mode === "pit" && st.sessionStartedAt > 0 ? Date.now() - st.sessionStartedAt : 0;
+      const net = st.mode === "pit" ? st.sessionNet : st.snap.stats.totalReturned - st.snap.stats.totalWagered;
+      const hands = st.snap.stats.hands;
+      const time = seatedMs > 0 ? `${formatSeated(seatedMs)} · ` : "";
+      const recap = `${time}${hands} hand${hands === 1 ? "" : "s"} · ${net === 0 ? "even" : `${net > 0 ? "+" : ""}${dollars(net)}`}`;
+      set({ seated: false, autoplay: false, lastRecap: recap });
+    },
+
+    enterPractice() {
+      haltAuto();
+      tableMode = "practice";
+      if (practiceHold) {
+        plus3Pending = practiceHold.plus3Pending;
+        plus3Last = practiceHold.plus3Last;
+      }
+      set({
+        mode: "practice",
+        seated: true,
+        pitBusy: false,
+        realityCheck: false,
+        seedCommit: null,
+        seedReveal: null,
+        lastSeedCommit: null,
+        lastRecap: null,
+        chatter: lineFor(settings.theme, "sit"),
+      });
+      publish();
     },
 
     async openPit() {
       haltAuto();
+      practiceHold = { plus3Pending, plus3Last };
       try {
         const view = await tableAction({ data: { op: "seat", ageAttest: true, device: pitDevice() } });
         applyPit(view, { chatter: lineFor(settings.theme, "sit") });

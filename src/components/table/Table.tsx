@@ -27,7 +27,8 @@ export function Table() {
   const sessionStartedAt = useTable((s) => s.sessionStartedAt);
   const sessionNet = useTable((s) => s.sessionNet);
   const lastRealityAckAt = useTable((s) => s.lastRealityAckAt);
-  const leaveTable = useTable((s) => s.leaveTable);
+  const lastRecap = useTable((s) => s.lastRecap);
+  const enterPractice = useTable((s) => s.enterPractice);
   const snap = useTable((s) => s.snap);
   const theme = useTable((s) => s.theme);
   const toast = useTable((s) => s.toast);
@@ -140,30 +141,35 @@ export function Table() {
           <li>Hi-Lo + I18</li>
           <li>Coach optional</li>
         </ul>
-        {mode === "pit" ? (
+        {lastRecap && (
+          <p className="mt-6 font-mono text-sm tabular-nums text-ivory">{lastRecap}</p>
+        )}
+        <div className="mt-8 flex w-full max-w-md flex-col gap-3 sm:flex-row sm:justify-center">
           <Button
-            className="mt-8"
             size="lg"
-            disabled={pitBusy}
+            className="sm:flex-1"
             onClick={() => {
               unlockAudio();
-              void openPit();
-            }}
-          >
-            Return to pit
-          </Button>
-        ) : (
-          <Button
-            className="mt-8"
-            size="lg"
-            onClick={() => {
-              unlockAudio();
-              seat();
+              enterPractice();
             }}
           >
             Practice table
           </Button>
-        )}
+          {mode === "pit" && (
+            <Button
+              size="lg"
+              variant="outline"
+              className="sm:flex-1"
+              disabled={pitBusy}
+              onClick={() => {
+                unlockAudio();
+                void openPit();
+              }}
+            >
+              Return to pit
+            </Button>
+          )}
+        </div>
         <div className="mt-8 w-full max-w-md rounded-[var(--radius-lg)] border border-border bg-felt-deep/50 px-4 py-4 text-left">
           <p className="text-[0.7rem] uppercase tracking-[0.16em] text-ivory/70">Pit seat</p>
           <p className="mt-2 text-sm leading-relaxed text-muted">

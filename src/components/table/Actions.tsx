@@ -6,6 +6,7 @@ import { isBlackjack } from "@/lib/blackjack/hand";
 import { cn } from "@/lib/utils";
 import { dollars } from "@/lib/utils";
 import type { Advice } from "@/lib/blackjack/strategy";
+import { TABLE_MIN } from "@/lib/blackjack/money";
 
 export function Actions() {
   const snap = useTable((s) => s.snap);
@@ -70,11 +71,14 @@ export function Actions() {
   }
 
   if (snap.phase === "BETTING") {
-    const broke = snap.bankroll <= 0 && snap.pendingBet <= 0 && plus3Pending <= 0 && !canRebet;
+    const tray = snap.bankroll + snap.pendingBet + plus3Pending;
+    const broke = tray < TABLE_MIN && !canRebet;
     if (broke) {
       return (
         <div className="flex flex-col items-center gap-3">
-          <p className="text-sm text-muted">The rack is empty.</p>
+          <p className="text-sm text-muted">
+            {tray <= 0 ? "The rack is empty." : `Under the ${dollars(TABLE_MIN)} table minimum.`}
+          </p>
           <Button onClick={newSession} size="lg">
             New session · $1,000
           </Button>

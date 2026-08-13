@@ -71,6 +71,13 @@ export function SettingsPanel({
         />
 
         <section>
+          <h3 className="mb-2 text-xs uppercase tracking-[0.16em] text-muted">Keys</h3>
+          <p className="font-mono text-xs leading-relaxed text-muted">
+            Enter deal · H hit · S stand · D double · P split · R surrender · C count · A coach · Esc clear
+          </p>
+        </section>
+
+        <section>
           <h3 className="mb-2 text-[0.7rem] uppercase tracking-[0.16em] text-muted">
             21+3
           </h3>

@@ -16,7 +16,7 @@ export const Route = createRootRoute({
       {
         name: "description",
         content:
-          "Casino-grade blackjack: 6-deck shoe, 3:2 naturals, late surrender, insurance, splits.",
+          "Casino-grade six-deck blackjack. 3:2 naturals, American peek, even money, late surrender, 21+3, Hi-Lo coach.",
       },
       { name: "apple-mobile-web-app-title", content: APP_NAME },
       { name: "theme-color", content: "#0b0f0c" },
@@ -36,6 +36,8 @@ export const Route = createRootRoute({
       { rel: "stylesheet", href: appCss },
       { rel: "manifest", href: "/__grok/manifest.webmanifest" },
       { rel: "apple-touch-icon", href: "/__grok/icon-180.png" },
+      { rel: "preconnect", href: "https://fonts.googleapis.com" },
+      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Outfit:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap",

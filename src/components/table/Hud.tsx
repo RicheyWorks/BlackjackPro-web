@@ -17,6 +17,7 @@ export function Hud({
   const trueCount = useTable((s) => s.trueCount);
   const countStake = useTable((s) => s.countStake);
   const chatter = useTable((s) => s.chatter);
+  const autoplay = useTable((s) => s.autoplay);
   const { user, isPending } = useCurrentUserState();
 
   return (
@@ -25,9 +26,7 @@ export function Hud({
         <p className="font-display text-xl tracking-tight text-ivory sm:text-2xl">
           Blackjack Pro
         </p>
-        <p className="mt-0.5 text-[0.7rem] uppercase tracking-[0.18em] text-muted">
-          6-deck · 3:2 · $5–$500
-        </p>
+        <p className="kicker mt-0.5">6-deck · 3:2 · $5–$500</p>
       </div>
 
       <div className="flex flex-wrap items-center justify-end gap-2">
@@ -43,6 +42,11 @@ export function Hud({
             value={trueCount.toFixed(1)}
             hint={`RC ${running >= 0 ? "+" : ""}${running} · ${countStake > 0 ? `$${countStake}` : "flat"}`}
           />
+        )}
+        {autoplay && (
+          <span className="inline-flex h-11 items-center rounded-[var(--radius-sm)] border border-ivory/30 px-3 text-xs uppercase tracking-[0.14em] text-ivory">
+            Coach
+          </span>
         )}
         <button
           type="button"

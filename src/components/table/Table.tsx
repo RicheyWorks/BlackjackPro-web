@@ -75,7 +75,7 @@ export function Table() {
   if (!seated) {
     return (
       <div className="felt-wash flex min-h-dvh flex-col items-center justify-center px-6 text-center">
-        <p className="text-[0.7rem] uppercase tracking-[0.22em] text-muted">RicheyWorks</p>
+        <p className="kicker">RicheyWorks</p>
         <h1 className="mt-3 font-display text-5xl tracking-tight text-ivory sm:text-6xl">
           Blackjack Pro
         </h1>
@@ -84,6 +84,14 @@ export function Table() {
           peek, even money, splits to four hands. Optional 21+3. Hi-Lo ramp,
           Illustrious 18, and a coach that can play the count for you.
         </p>
+        <ul className="mt-6 grid w-full max-w-md grid-cols-2 gap-x-4 gap-y-1 text-left text-xs text-muted sm:grid-cols-3">
+          <li>S17 · DAS · late surrender</li>
+          <li>Peek ace / ten</li>
+          <li>Even money 1:1</li>
+          <li>21+3 on the deal</li>
+          <li>Hi-Lo + I18</li>
+          <li>Coach optional</li>
+        </ul>
         <Button
           className="mt-8"
           size="lg"
@@ -94,6 +102,9 @@ export function Table() {
         >
           Sit down
         </Button>
+        <p className="mt-6 max-w-sm font-mono text-[0.65rem] leading-relaxed tracking-wide text-muted">
+          Enter deal · H hit · S stand · D double · P split · R surrender · C count · A coach
+        </p>
       </div>
     );
   }
@@ -103,9 +114,10 @@ export function Table() {
       <Hud onOpenSettings={() => setSettings(true)} onOpenStats={() => setStats(true)} />
 
       <main className="relative mx-auto flex w-full max-w-5xl flex-1 flex-col justify-between gap-4 px-3 py-4 sm:px-6">
-        <section className="table-rail rounded-[2rem] px-2 py-6 sm:px-8 sm:py-8">
-          <p className="mb-3 text-center text-[0.65rem] uppercase tracking-[0.2em] text-muted">
+        <section className="table-rail rounded-[var(--radius-xl)] px-2 py-6 sm:px-8 sm:py-8">
+          <p className="kicker mb-4 text-center">
             {soft17 ? "Dealer hits soft 17" : "Dealer stands on soft 17"}
+            {autoplay ? " · Coach is playing" : ""}
           </p>
           <HandRow
             hand={snap.dealer}

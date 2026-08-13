@@ -12,7 +12,7 @@ import { settlePlus3, type Plus3Result } from "@/lib/blackjack/plus3";
 import { chooseCountBet } from "@/lib/blackjack/deviations";
 import { appendTape, type TapeMark } from "@/lib/blackjack/tape";
 import { nextAutoStep } from "@/lib/blackjack/autoplay";
-import { isTableChip, TABLE_MAX } from "@/lib/blackjack/money";
+import { isTableChip, TABLE_MAX, TABLE_MIN } from "@/lib/blackjack/money";
 import { sfx } from "@/lib/blackjack/sfx";
 
 export type BetRail = "main" | "plus3";
@@ -126,7 +126,7 @@ function rebetAffordable(): boolean {
     engine.phase === "BETTING" &&
     engine.pendingBet === 0 &&
     plus3Pending === 0 &&
-    settings.lastMainBet > 0 &&
+    settings.lastMainBet >= TABLE_MIN &&
     engine.bankroll >= settings.lastMainBet + settings.lastPlus3Bet
   );
 }

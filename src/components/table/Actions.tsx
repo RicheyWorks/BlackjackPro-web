@@ -110,7 +110,7 @@ export function Actions() {
             Deal
           </Button>
         ) : canRebet ? (
-          <Button onClick={rebetDeal} size="lg">
+          <Button onClick={rebetDeal} size="lg" autoFocus>
             Deal again
             <span className="text-[0.65rem] uppercase tracking-wider opacity-70">
               {dollars(lastTotal)}
@@ -189,6 +189,11 @@ export function Actions() {
 
   return (
     <div className="flex flex-col items-center gap-3">
+      {snap.hands.length > 1 && (
+        <p className="text-xs uppercase tracking-[0.16em] text-ivory/80">
+          Playing hand {snap.activeIndex + 1} of {snap.hands.length}
+        </p>
+      )}
       {coach && (
         <p className="text-xs uppercase tracking-[0.16em] text-muted">
           {coach.deviate ? `Deviation · ${adviceLabel(coach.action)}` : `Basic strategy · ${adviceLabel(coach.action)}`}

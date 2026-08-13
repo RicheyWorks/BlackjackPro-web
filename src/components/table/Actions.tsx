@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { useTable } from "@/store/table";
 import { adviceLabel } from "@/lib/blackjack/strategy";
 import { coachAdvice, takeInsuranceAt } from "@/lib/blackjack/deviations";
-import { isBlackjack } from "@/lib/blackjack/hand";
+import { isBlackjack, isPair } from "@/lib/blackjack/hand";
 import { cn } from "@/lib/utils";
 import { dollars } from "@/lib/utils";
 import type { Advice } from "@/lib/blackjack/strategy";
@@ -184,6 +184,9 @@ export function Actions() {
     </Button>
   );
 
+  const two = (hand?.cards.length ?? 0) === 2;
+  const pair = Boolean(hand && isPair(hand.cards));
+
   return (
     <div className="flex flex-col items-center gap-3">
       {coach && (
@@ -195,9 +198,9 @@ export function Actions() {
       <div className="flex flex-wrap justify-center gap-2">
         {action("HIT", snap.canHit, hit, "Hit")}
         {action("STAND", snap.canStand, stand, "Stand")}
-        {action("DOUBLE", snap.canDouble, double, "Double")}
-        {action("SPLIT", snap.canSplit, split, "Split")}
-        {action("SURRENDER", snap.canSurrender, surrender, "Surrender")}
+        {two && action("DOUBLE", snap.canDouble, double, "Double")}
+        {pair && action("SPLIT", snap.canSplit, split, "Split")}
+        {two && !hand?.fromSplit && action("SURRENDER", snap.canSurrender, surrender, "Surrender")}
       </div>
       <Button
         variant={autoplay ? "default" : "ghost"}

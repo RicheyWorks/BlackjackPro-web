@@ -150,7 +150,8 @@ describe("casino phase 2", () => {
   });
 
   it("formats seat time", () => {
-    assert.equal(formatSeated(0), "0m");
+    assert.equal(formatSeated(0), "0s");
+    assert.equal(formatSeated(12_000), "12s");
     assert.equal(formatSeated(12 * 60_000), "12m");
     assert.equal(formatSeated(90 * 60_000), "1h 30m");
   });

@@ -108,6 +108,7 @@ let tableMode: "practice" | "pit" = "practice";
 let pitLock = false;
 let capWarned = false;
 let practiceHold: { plus3Pending: number; plus3Last: Plus3Result | null } | null = null;
+let feltSince = 0;
 
 function persist(): void {
   if (tableMode === "pit") {
@@ -478,6 +479,7 @@ export const useTable = create<TableState>((set, get) => {
     rulesHash: null,
 
     seat() {
+      if (!feltSince) feltSince = Date.now();
       set({
         seated: true,
         chatter: lineFor(settings.theme, "sit"),
@@ -492,7 +494,11 @@ export const useTable = create<TableState>((set, get) => {
       haltAuto();
       const st = get();
       const seatedMs =
-        st.mode === "pit" && st.sessionStartedAt > 0 ? Date.now() - st.sessionStartedAt : 0;
+        st.mode === "pit" && st.sessionStartedAt > 0
+          ? Date.now() - st.sessionStartedAt
+          : feltSince
+            ? Date.now() - feltSince
+            : 0;
       const net = st.mode === "pit" ? st.sessionNet : st.snap.stats.totalReturned - st.snap.stats.totalWagered;
       const hands = st.snap.stats.hands;
       const time = seatedMs > 0 ? `${formatSeated(seatedMs)} · ` : "";
@@ -502,6 +508,7 @@ export const useTable = create<TableState>((set, get) => {
 
     enterPractice() {
       haltAuto();
+      if (tableMode !== "practice" || !feltSince) feltSince = Date.now();
       tableMode = "practice";
       if (practiceHold) {
         plus3Pending = practiceHold.plus3Pending;
@@ -856,6 +863,7 @@ export const useTable = create<TableState>((set, get) => {
         return;
       }
       engine.newSession(STARTING_BANKROLL);
+      feltSince = Date.now();
       resetCount();
       plus3Pending = 0;
       plus3Last = null;

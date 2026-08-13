@@ -12,13 +12,12 @@ import { SettingsPanel, StatsPanel } from "./Panels";
 import { Tape } from "./Tape";
 import { ShoeTray } from "./ShoeTray";
 import { Button } from "@/components/ui/button";
+import { formatSeated, needsRealityWarn } from "@/lib/casino/reality";
 
 let realityWarnShown = false;
-import { formatSeated, needsRealityWarn } from "@/lib/casino/reality";
 
 export function Table() {
   const seated = useTable((s) => s.seated);
-  const seat = useTable((s) => s.seat);
   const openPit = useTable((s) => s.openPit);
   const mode = useTable((s) => s.mode);
   const pitBusy = useTable((s) => s.pitBusy);
@@ -26,7 +25,6 @@ export function Table() {
   const ackReality = useTable((s) => s.ackReality);
   const sessionStartedAt = useTable((s) => s.sessionStartedAt);
   const sessionNet = useTable((s) => s.sessionNet);
-  const lastRealityAckAt = useTable((s) => s.lastRealityAckAt);
   const lastRecap = useTable((s) => s.lastRecap);
   const enterPractice = useTable((s) => s.enterPractice);
   const snap = useTable((s) => s.snap);
@@ -48,7 +46,13 @@ export function Table() {
   const insure = useTable((s) => s.insure);
   const [settings, setSettings] = useState(false);
   const [stats, setStats] = useState(false);
-  const [ageOk, setAgeOk] = useState(false);
+  const [ageOk, setAgeOk] = useState(() => {
+    try {
+      return sessionStorage.getItem("blackjack-pro-age") === "1";
+    } catch {
+      return false;
+    }
+  });
   const { user, isPending } = useCurrentUserState();
 
   useEffect(() => {
@@ -172,37 +176,54 @@ export function Table() {
         </div>
         <div className="mt-8 w-full max-w-md rounded-[var(--radius-lg)] border border-border bg-felt-deep/50 px-4 py-4 text-left">
           <p className="text-[0.7rem] uppercase tracking-[0.16em] text-ivory/70">Pit seat</p>
-          <p className="mt-2 text-sm leading-relaxed text-muted">
-            Signed-in play chips on a server ledger. The hole stays off the
-            wire. Not a licensed casino. No real money.
-          </p>
-          <label className="mt-3 flex items-start gap-2 text-sm text-ivory">
-            <input
-              type="checkbox"
-              className="mt-1"
-              checked={ageOk}
-              onChange={(e) => setAgeOk(e.target.checked)}
-            />
-            <span>I am 18 or older. These chips are not money.</span>
-          </label>
-          {isPending ? (
-            <div className="mt-3 h-11 animate-pulse rounded-[var(--radius-md)] bg-fg/10" />
-          ) : user ? (
-            <Button
-              className="mt-3 w-full"
-              variant="outline"
-              disabled={!ageOk || pitBusy}
-              onClick={() => {
-                unlockAudio();
-                void openPit();
-              }}
-            >
-              Open pit seat
-            </Button>
+          {mode === "pit" ? (
+            <p className="mt-2 text-sm leading-relaxed text-muted">
+              Your pit seat is still open. The shoe and the ledger are where
+              you left them. Sit back down with Return to pit.
+            </p>
           ) : (
-            <Button asChild className="mt-3 w-full" variant="outline" disabled={!ageOk}>
-              <Link to="/login">Sign in for a pit seat</Link>
-            </Button>
+            <>
+              <p className="mt-2 text-sm leading-relaxed text-muted">
+                Signed-in play chips on a server ledger. The hole stays off the
+                wire. Not a licensed casino. No real money.
+              </p>
+              <label className="mt-3 flex items-start gap-2 text-sm text-ivory">
+                <input
+                  type="checkbox"
+                  className="mt-1"
+                  checked={ageOk}
+                  onChange={(e) => {
+                    const on = e.target.checked;
+                    setAgeOk(on);
+                    try {
+                      sessionStorage.setItem("blackjack-pro-age", on ? "1" : "0");
+                    } catch {
+                      /* ignore */
+                    }
+                  }}
+                />
+                <span>I am 18 or older. These chips are not money.</span>
+              </label>
+              {isPending ? (
+                <div className="mt-3 h-11 animate-pulse rounded-[var(--radius-md)] bg-fg/10" />
+              ) : user ? (
+                <Button
+                  className="mt-3 w-full"
+                  variant="outline"
+                  disabled={!ageOk || pitBusy}
+                  onClick={() => {
+                    unlockAudio();
+                    void openPit();
+                  }}
+                >
+                  Open pit seat
+                </Button>
+              ) : (
+                <Button asChild className="mt-3 w-full" variant="outline" disabled={!ageOk}>
+                  <Link to="/login">Sign in for a pit seat</Link>
+                </Button>
+              )}
+            </>
           )}
         </div>
         <p className="mt-6 max-w-sm font-mono text-[0.65rem] leading-relaxed tracking-wide text-muted">

@@ -74,6 +74,7 @@ Practice mode stays. It never writes the pit ledger.
 - Seat clock, reality check with time / hands / net, copy-proof on a settled hand.
 - Loss-cap remaining on the rail. In-browser hash of a pasted reveal against the last commit.
 - Cool-off / exclude / void take a second tap. Ledger downloads as JSON.
+- Stand up leaves the felt without voiding the seat. Coach stops on a reality lock. Five-minute heads-up before the 45-minute check.
 - Pit seat bound to the browser that opened it.
 - HMAC shoe shuffle is still play-chip grade — a lab will name the seeder later.
 

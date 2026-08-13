@@ -79,6 +79,7 @@ export function toView(
       s.plus3Pending +
       liveInPlay(s.engine.phase, s.engine.insuranceBet, s.engine.player) -
       s.sessionAnchor,
+    lastRealityAckAt: s.lastRealityAckAt,
     rulesPack: pack,
     rulesHash: extra.rulesHash,
     seated: true,

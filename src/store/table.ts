@@ -57,6 +57,8 @@ interface TableState {
   realityCheck: boolean;
   sessionStartedAt: number;
   sessionNet: number;
+  lastRealityAckAt: number;
+  leaveTable: () => void;
   lossLimit: number;
   cooloffUntil: string | null;
   selfExcludedUntil: string | null;
@@ -320,6 +322,7 @@ export const useTable = create<TableState>((set, get) => {
       realityCheck: view.realityCheck,
       sessionStartedAt: view.sessionStartedAt,
       sessionNet: view.sessionNet,
+      lastRealityAckAt: view.lastRealityAckAt,
       lossLimit: view.lossLimit,
       cooloffUntil: view.cooloffUntil,
       selfExcludedUntil: view.selfExcludedUntil,
@@ -460,6 +463,7 @@ export const useTable = create<TableState>((set, get) => {
     realityCheck: false,
     sessionStartedAt: 0,
     sessionNet: 0,
+    lastRealityAckAt: 0,
     lossLimit: 0,
     cooloffUntil: null,
     selfExcludedUntil: null,
@@ -475,6 +479,11 @@ export const useTable = create<TableState>((set, get) => {
         lastMainBet: settings.lastMainBet,
         lastPlus3Bet: settings.lastPlus3Bet,
       });
+    },
+
+    leaveTable() {
+      haltAuto();
+      set({ seated: false, autoplay: false });
     },
 
     async openPit() {
@@ -780,6 +789,7 @@ export const useTable = create<TableState>((set, get) => {
         hand: snap.hands[snap.activeIndex],
         up: snap.dealer.cards[0],
         soft17: st.soft17,
+        locked: st.realityCheck,
       });
       if (step.kind === "stop") {
         haltAuto();

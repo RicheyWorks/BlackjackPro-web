@@ -12,7 +12,9 @@ import { SettingsPanel, StatsPanel } from "./Panels";
 import { Tape } from "./Tape";
 import { ShoeTray } from "./ShoeTray";
 import { Button } from "@/components/ui/button";
-import { formatSeated } from "@/lib/casino/reality";
+
+let realityWarnShown = false;
+import { formatSeated, needsRealityWarn } from "@/lib/casino/reality";
 
 export function Table() {
   const seated = useTable((s) => s.seated);
@@ -24,6 +26,8 @@ export function Table() {
   const ackReality = useTable((s) => s.ackReality);
   const sessionStartedAt = useTable((s) => s.sessionStartedAt);
   const sessionNet = useTable((s) => s.sessionNet);
+  const lastRealityAckAt = useTable((s) => s.lastRealityAckAt);
+  const leaveTable = useTable((s) => s.leaveTable);
   const snap = useTable((s) => s.snap);
   const theme = useTable((s) => s.theme);
   const toast = useTable((s) => s.toast);
@@ -55,6 +59,25 @@ export function Table() {
     const t = window.setTimeout(dismissToast, 3200);
     return () => window.clearTimeout(t);
   }, [toast, dismissToast]);
+
+  useEffect(() => {
+    if (!seated || mode !== "pit") return;
+    const tick = () => {
+      if (useTable.getState().realityCheck) return;
+      const st = useTable.getState();
+      if (needsRealityWarn(st.sessionStartedAt, st.lastRealityAckAt)) {
+        if (!realityWarnShown) {
+          realityWarnShown = true;
+          useTable.setState({ toast: "Five minutes until the next reality check." });
+        }
+      } else {
+        realityWarnShown = false;
+      }
+    };
+    tick();
+    const id = window.setInterval(tick, 15_000);
+    return () => window.clearInterval(id);
+  }, [seated, mode]);
 
   useEffect(() => {
     if (!seated) return;
@@ -117,16 +140,30 @@ export function Table() {
           <li>Hi-Lo + I18</li>
           <li>Coach optional</li>
         </ul>
-        <Button
-          className="mt-8"
-          size="lg"
-          onClick={() => {
-            unlockAudio();
-            seat();
-          }}
-        >
-          Practice table
-        </Button>
+        {mode === "pit" ? (
+          <Button
+            className="mt-8"
+            size="lg"
+            disabled={pitBusy}
+            onClick={() => {
+              unlockAudio();
+              void openPit();
+            }}
+          >
+            Return to pit
+          </Button>
+        ) : (
+          <Button
+            className="mt-8"
+            size="lg"
+            onClick={() => {
+              unlockAudio();
+              seat();
+            }}
+          >
+            Practice table
+          </Button>
+        )}
         <div className="mt-8 w-full max-w-md rounded-[var(--radius-lg)] border border-border bg-felt-deep/50 px-4 py-4 text-left">
           <p className="text-[0.7rem] uppercase tracking-[0.16em] text-ivory/70">Pit seat</p>
           <p className="mt-2 text-sm leading-relaxed text-muted">

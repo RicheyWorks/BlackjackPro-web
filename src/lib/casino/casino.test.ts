@@ -11,9 +11,9 @@ import { applyOp } from "./apply";
 import { dumpSession, parseBlob, type PitSession } from "./session";
 import { buildShuffledShoe, commitSeed, hmacIndex, newSeed } from "./rng.server";
 import { nextAutoStep } from "@/lib/blackjack/autoplay";
-import { needsRealityAck, formatSeated } from "./reality";
+import { needsRealityAck, formatSeated, needsRealityWarn } from "./reality";
 import { assertRate, _resetRateForTests } from "./rate";
-import { REALITY_MS } from "./types";
+import { REALITY_MS, REALITY_WARN_MS } from "./types";
 import { commitFromSeed } from "./verify";
 import { rulesFingerprint } from "@/lib/blackjack/rules";
 import { DEFAULT_RULES } from "@/lib/blackjack/types";
@@ -155,6 +155,13 @@ describe("casino phase 2", () => {
     assert.equal(formatSeated(90 * 60_000), "1h 30m");
   });
 
+  it("warns five minutes before the reality lock", () => {
+    const start = 1_000_000;
+    assert.equal(needsRealityWarn(start, start, start + REALITY_WARN_MS - 1), false);
+    assert.equal(needsRealityWarn(start, start, start + REALITY_WARN_MS), true);
+    assert.equal(needsRealityWarn(start, start, start + REALITY_MS), false);
+  });
+
   it("fingerprints S17 and H17 as different packs", () => {
     const s17 = rulesFingerprint(DEFAULT_RULES);
     const h17 = rulesFingerprint({ ...DEFAULT_RULES, dealerHitsSoft17: true });
@@ -214,6 +221,27 @@ describe("casino phase 2", () => {
       canSplit: false,
       canSurrender: false,
       soft17: false,
+    });
+    assert.equal(step.kind, "stop");
+  });
+
+  it("stops the coach when the table is locked", () => {
+    const step = nextAutoStep({
+      phase: "BETTING",
+      canDeal: false,
+      canInsure: false,
+      canEvenMoney: false,
+      pendingBet: 25,
+      bankroll: 975,
+      countStake: 25,
+      trueCount: 0,
+      canHit: false,
+      canStand: false,
+      canDouble: false,
+      canSplit: false,
+      canSurrender: false,
+      soft17: false,
+      locked: true,
     });
     assert.equal(step.kind, "stop");
   });

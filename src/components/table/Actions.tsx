@@ -35,6 +35,7 @@ export function Actions() {
   const mode = useTable((s) => s.mode);
   const autoplay = useTable((s) => s.autoplay);
   const setAutoplay = useTable((s) => s.setAutoplay);
+  const leaveTable = useTable((s) => s.leaveTable);
 
   if (snap.phase === "INSURANCE") {
     const natural = snap.hands[0] ? isBlackjack(snap.hands[0]) : false;
@@ -138,6 +139,9 @@ export function Actions() {
         >
           {autoplay ? "Stop coach" : "Let the coach play"}
         </Button>
+        <Button variant="ghost" onClick={leaveTable}>
+          Stand up
+        </Button>
       </div>
     );
   }
@@ -194,6 +198,9 @@ export function Actions() {
         onClick={() => setAutoplay(!autoplay)}
       >
         {autoplay ? "Stop coach" : "Let the coach play"}
+      </Button>
+      <Button variant="ghost" onClick={leaveTable}>
+        Stand up
       </Button>
     </div>
   );

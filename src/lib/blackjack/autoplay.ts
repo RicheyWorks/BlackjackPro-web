@@ -28,10 +28,12 @@ export interface AutoView {
   hand?: HandState;
   up?: Card;
   soft17: boolean;
+  locked?: boolean;
 }
 
 /** Next thing the coach should do. Never places 21+3. */
 export function nextAutoStep(s: AutoView): AutoStep {
+  if (s.locked) return { kind: "stop" };
   if (s.phase === "DEALING" || s.phase === "DEALER" || s.phase === "SETTLE") {
     return { kind: "wait" };
   }
@@ -46,6 +48,7 @@ export function nextAutoStep(s: AutoView): AutoStep {
       return { kind: "countBet" };
     }
     if (s.canDeal) return { kind: "deal" };
+    if (s.pendingBet >= TABLE_MIN) return { kind: "stop" };
     if (s.bankroll + s.pendingBet < TABLE_MIN) return { kind: "stop" };
     if (s.bankroll <= 0 && s.pendingBet <= 0) return { kind: "stop" };
     return { kind: "wait" };

@@ -1,4 +1,4 @@
-import { REALITY_MS } from "./types";
+import { REALITY_MS, REALITY_WARN_MS } from "./types";
 
 export function needsRealityAck(
   sessionStartedAt: number,
@@ -7,6 +7,16 @@ export function needsRealityAck(
 ): boolean {
   const last = Math.max(sessionStartedAt, lastRealityAckAt);
   return now - last >= REALITY_MS;
+}
+
+export function needsRealityWarn(
+  sessionStartedAt: number,
+  lastRealityAckAt: number,
+  now = Date.now(),
+): boolean {
+  const last = Math.max(sessionStartedAt, lastRealityAckAt);
+  const elapsed = now - last;
+  return elapsed >= REALITY_WARN_MS && elapsed < REALITY_MS;
 }
 
 export function formatSeated(ms: number): string {

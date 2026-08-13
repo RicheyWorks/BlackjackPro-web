@@ -86,6 +86,7 @@ export interface PitView {
   realityCheck: boolean;
   sessionStartedAt: number;
   sessionNet: number;
+  lastRealityAckAt: number;
   rulesPack: string;
   rulesHash: string;
   seated: true;
@@ -135,3 +136,4 @@ export interface PitStats {
 
 export const PLAY_GRANT = 1000;
 export const REALITY_MS = 45 * 60 * 1000;
+export const REALITY_WARN_MS = 40 * 60 * 1000;

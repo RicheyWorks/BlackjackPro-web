@@ -16,6 +16,8 @@ export function toView(
     cooloffUntil: string | null;
     selfExcludedUntil: string | null;
     rulesHash: string;
+    lastSeedCommit: string | null;
+    seedOk: boolean;
   },
 ): PitView {
   const snap = s.engine.snapshot();
@@ -61,6 +63,8 @@ export function toView(
     tape: s.tape,
     seedCommit: s.seedCommit,
     seedReveal: s.prevSeedReveal,
+    lastSeedCommit: extra.lastSeedCommit,
+    seedOk: extra.seedOk,
     handId: s.handId,
     soft17: s.engine.rules.dealerHitsSoft17,
     lossLimit: extra.lossLimit,

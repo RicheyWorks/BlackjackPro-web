@@ -18,6 +18,7 @@ interface ProfileRow {
   rg_loss_limit: number;
   rg_cooloff_until: string | null;
   self_excluded_until: string | null;
+  device_id: string | null;
 }
 
 interface TableRow {
@@ -56,6 +57,7 @@ function blocked(profile: ProfileRow | null): string | null {
 
 function reshuffle(s: PitSession): void {
   s.prevSeedReveal = s.seed;
+  s.prevSeedCommit = s.seedCommit;
   s.seed = newSeed();
   s.seedCommit = commitSeed(s.seed);
   const shoe = buildShuffledShoe(s.engine.rules.decks, s.seed, s.engine.rules.penetration);
@@ -82,6 +84,7 @@ function freshSession(): PitSession {
     seed,
     seedCommit,
     prevSeedReveal: null,
+    prevSeedCommit: null,
     handId: null,
     counter: new HiLoCounter(),
     seen: new Set(),
@@ -103,7 +106,7 @@ function exposed(s: PitSession): number {
 
 async function loadProfile(sql: Sql, userId: string): Promise<ProfileRow | null> {
   const rows = await sql<ProfileRow>`
-    select age_attested, rg_loss_limit, rg_cooloff_until, self_excluded_until
+    select age_attested, rg_loss_limit, rg_cooloff_until, self_excluded_until, device_id
     from player_profile where user_id = ${userId}
   `;
   return rows[0] ?? null;
@@ -204,19 +207,27 @@ async function closeHand(sql: Sql, userId: string, s: PitSession): Promise<void>
   `;
 }
 
-function extra(profile: ProfileRow | null, hash: string) {
+function extra(profile: ProfileRow | null, s: PitSession) {
+  const last = s.prevSeedCommit;
+  const reveal = s.prevSeedReveal;
+  const seedOk = !reveal || !last || commitSeed(reveal) === last;
   return {
     lossLimit: profile?.rg_loss_limit ?? 0,
     cooloffUntil: iso(profile?.rg_cooloff_until),
     selfExcludedUntil: iso(profile?.self_excluded_until),
-    rulesHash: hash,
+    rulesHash: packOf(s).hash,
+    lastSeedCommit: last,
+    seedOk,
   };
 }
 
-export async function runTable(userId: string, op: PitOp): Promise<PitView> {
+export async function runTable(userId: string, op: PitOp, device = ""): Promise<PitView> {
   assertRate(userId, op.op);
   return withTransaction(async (sql) => {
     let profile = await loadProfile(sql, userId);
+    if (device && profile?.device_id && profile.device_id !== device && op.op !== "sync") {
+      throw new Error("This seat is bound to another device.");
+    }
     const gate = blocked(profile);
     if (gate && op.op !== "sync" && op.op !== "seat") {
       const finish = new Set(["hit", "stand", "double", "split", "surrender", "insure"]);
@@ -227,13 +238,17 @@ export async function runTable(userId: string, op: PitOp): Promise<PitView> {
 
     if (op.op === "seat") {
       await sql`
-        insert into player_profile (user_id, age_attested, age_attested_at)
-        values (${userId}, ${true}, now())
+        insert into player_profile (user_id, age_attested, age_attested_at, device_id)
+        values (${userId}, ${true}, now(), ${device || null})
         on conflict (user_id) do update
           set age_attested = true,
-              age_attested_at = coalesce(player_profile.age_attested_at, now())
+              age_attested_at = coalesce(player_profile.age_attested_at, now()),
+              device_id = coalesce(player_profile.device_id, excluded.device_id)
       `;
       profile = await loadProfile(sql, userId);
+      if (device && profile?.device_id && profile.device_id !== device) {
+        throw new Error("This seat is bound to another device.");
+      }
       const again = blocked(profile);
       if (again) {
         throw new Error(again === "self-excluded" ? "This seat is self-excluded." : "Cool-off is still running.");
@@ -385,7 +400,7 @@ export async function runTable(userId: string, op: PitOp): Promise<PitView> {
       if (!ok) throw new Error("Table is busy. Try again.");
     }
 
-    return toView(session, extra(profile, packOf(session).hash));
+    return toView(session, extra(profile, session));
   });
 }
 

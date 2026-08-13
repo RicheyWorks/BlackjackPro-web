@@ -53,6 +53,7 @@ export interface PitSession {
   seed: string;
   seedCommit: string;
   prevSeedReveal: string | null;
+  prevSeedCommit: string | null;
   handId: string | null;
   counter: HiLoCounter;
   seen: Set<number>;
@@ -73,6 +74,7 @@ export interface PitBlob {
   seed: string;
   seedCommit: string;
   prevSeedReveal: string | null;
+  prevSeedCommit: string | null;
   handId: string | null;
   live: LiveRound | null;
   shoe: LiveShoe;
@@ -119,6 +121,7 @@ export function dumpSession(s: PitSession): PitBlob {
     seed: s.seed,
     seedCommit: s.seedCommit,
     prevSeedReveal: s.prevSeedReveal,
+    prevSeedCommit: s.prevSeedCommit,
     handId: s.handId,
     live,
     shoe: s.engine.shoe.snapshot(),
@@ -179,6 +182,10 @@ export function parseBlob(raw: string, bankroll: number, version: number): PitSe
       prevSeedReveal:
         typeof o.prevSeedReveal === "string" && /^[0-9a-f]{64}$/.test(o.prevSeedReveal)
           ? o.prevSeedReveal
+          : null,
+      prevSeedCommit:
+        typeof o.prevSeedCommit === "string" && /^[0-9a-f]{64}$/.test(o.prevSeedCommit)
+          ? o.prevSeedCommit
           : null,
       handId: typeof o.handId === "string" && o.handId.length > 0 && o.handId.length <= 64 ? o.handId : null,
       counter,

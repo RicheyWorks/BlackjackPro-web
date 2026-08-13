@@ -5,7 +5,7 @@ import { createRules } from "@/lib/blackjack/rules";
 import { HiLoCounter } from "@/lib/blackjack/hilo";
 import { redactDealer } from "./redact";
 import { settlePlus3 } from "@/lib/blackjack/plus3";
-import { parseOp } from "./parse";
+import { parseDevice, parseOp } from "./parse";
 import { applyOp } from "./apply";
 import { dumpSession, parseBlob, type PitSession } from "./session";
 import { buildShuffledShoe, commitSeed, hmacIndex, newSeed } from "./rng.server";
@@ -32,6 +32,7 @@ function session(bank = 1000): PitSession {
     seed,
     seedCommit: commitSeed(seed),
     prevSeedReveal: null,
+    prevSeedCommit: null,
     handId: null,
     counter: new HiLoCounter(),
     seen: new Set(),
@@ -163,6 +164,18 @@ describe("casino phase 2", () => {
 
   it("parses ackReality", () => {
     assert.equal(parseOp({ op: "ackReality" }).op, "ackReality");
+  });
+
+  it("accepts a 32-hex device id", () => {
+    assert.equal(parseDevice({ device: "ab".repeat(16) }), "ab".repeat(16));
+    assert.equal(parseDevice({ device: "nope" }), "");
+  });
+
+  it("retired seed hashes to its commit", () => {
+    const seed = newSeed();
+    const commit = commitSeed(seed);
+    assert.equal(commitSeed(seed), commit);
+    assert.notEqual(commitSeed(newSeed()), commit);
   });
 
   it("refunds 21+3 when the live box is voided", () => {

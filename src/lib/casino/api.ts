@@ -1,14 +1,14 @@
 import { createServerFn } from "@tanstack/react-start";
 import { authMiddleware } from "@/lib/auth/middleware";
-import { parseOp } from "./parse";
+import { parseDevice, parseOp } from "./parse";
 import type { HandRow, PitStats, PitView } from "./types";
 
 export const tableAction = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
-  .validator((raw: unknown) => parseOp(raw))
+  .validator((raw: unknown) => ({ op: parseOp(raw), device: parseDevice(raw) }))
   .handler(async ({ context, data }): Promise<PitView> => {
     const { runTable } = await import("./table.server");
-    return runTable(context.userId, data);
+    return runTable(context.userId, data.op, data.device);
   });
 
 export const fetchTable = createServerFn({ method: "GET" })

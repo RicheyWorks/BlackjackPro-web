@@ -46,6 +46,8 @@ export function SettingsPanel({
   const lossLimit = useTable((s) => s.lossLimit);
   const seedCommit = useTable((s) => s.seedCommit);
   const seedReveal = useTable((s) => s.seedReveal);
+  const lastSeedCommit = useTable((s) => s.lastSeedCommit);
+  const seedOk = useTable((s) => s.seedOk);
   const rulesPack = useTable((s) => s.rulesPack);
 
   return (
@@ -140,11 +142,22 @@ export function SettingsPanel({
               the server. They are not a substitute for a licensed RG programme.
             </p>
             {seedCommit && (
-              <p className="break-all font-mono text-[0.6rem] text-muted">
-                Shoe commit {seedCommit.slice(0, 16)}…
-                {seedReveal ? ` · last seed ${seedReveal.slice(0, 12)}…` : ""}
-                {rulesPack ? ` · ${rulesPack}` : ""}
-              </p>
+              <div className="space-y-1">
+                <p className="break-all font-mono text-[0.6rem] text-muted">
+                  Live commit {seedCommit.slice(0, 16)}…
+                  {rulesPack ? ` · ${rulesPack}` : ""}
+                </p>
+                {seedReveal && lastSeedCommit ? (
+                  <p className="break-all font-mono text-[0.6rem] text-muted">
+                    Last shoe {seedOk ? "checks out" : "does not match its commit"} ·{" "}
+                    {lastSeedCommit.slice(0, 12)}…
+                  </p>
+                ) : (
+                  <p className="text-[0.6rem] text-muted">
+                    The live seed is revealed when this shoe is retired.
+                  </p>
+                )}
+              </div>
             )}
             <div className="flex flex-wrap gap-2">
               {[0, 100, 250, 500].map((n) => (

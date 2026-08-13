@@ -76,6 +76,8 @@ export interface PitView {
   tape: TapeMark[];
   seedCommit: string;
   seedReveal: string | null;
+  lastSeedCommit: string | null;
+  seedOk: boolean;
   handId: string | null;
   soft17: boolean;
   lossLimit: number;

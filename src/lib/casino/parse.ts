@@ -66,3 +66,10 @@ export function parseOp(raw: unknown): PitOp {
       return { op: o.op } as PitOp;
   }
 }
+
+export function parseDevice(raw: unknown): string {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return "";
+  const device = (raw as Record<string, unknown>).device;
+  if (typeof device !== "string" || !/^[0-9a-f]{32}$/.test(device)) return "";
+  return device;
+}

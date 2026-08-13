@@ -13,6 +13,7 @@ import { chooseCountBet } from "@/lib/blackjack/deviations";
 import { appendTape, type TapeMark } from "@/lib/blackjack/tape";
 import { nextAutoStep } from "@/lib/blackjack/autoplay";
 import { tableAction } from "@/lib/casino/api";
+import { pitDevice } from "@/lib/casino/device";
 import { viewToSnap } from "@/lib/casino/view";
 import type { PitOp, PitView } from "@/lib/casino/types";
 import { isTableChip, TABLE_MAX, TABLE_MIN } from "@/lib/blackjack/money";
@@ -51,6 +52,8 @@ interface TableState {
   pitBusy: boolean;
   seedCommit: string | null;
   seedReveal: string | null;
+  lastSeedCommit: string | null;
+  seedOk: boolean;
   realityCheck: boolean;
   lossLimit: number;
   rulesPack: string | null;
@@ -297,6 +300,8 @@ export const useTable = create<TableState>((set, get) => {
       soft17: view.soft17,
       seedCommit: view.seedCommit,
       seedReveal: view.seedReveal,
+      lastSeedCommit: view.lastSeedCommit,
+      seedOk: view.seedOk,
       realityCheck: view.realityCheck,
       lossLimit: view.lossLimit,
       rulesPack: view.rulesPack,
@@ -313,7 +318,7 @@ export const useTable = create<TableState>((set, get) => {
     pitLock = true;
     set({ pitBusy: true });
     try {
-      const view = await tableAction({ data: op });
+      const view = await tableAction({ data: { ...op, device: pitDevice() } });
       applyPit(view);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Pit error";
@@ -431,6 +436,8 @@ export const useTable = create<TableState>((set, get) => {
     pitBusy: false,
     seedCommit: null,
     seedReveal: null,
+    lastSeedCommit: null,
+    seedOk: true,
     realityCheck: false,
     lossLimit: 0,
     rulesPack: null,
@@ -450,7 +457,7 @@ export const useTable = create<TableState>((set, get) => {
     async openPit() {
       haltAuto();
       try {
-        const view = await tableAction({ data: { op: "seat", ageAttest: true } });
+        const view = await tableAction({ data: { op: "seat", ageAttest: true, device: pitDevice() } });
         applyPit(view, { chatter: lineFor(settings.theme, "sit") });
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Pit error";

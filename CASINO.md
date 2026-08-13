@@ -68,6 +68,8 @@ Practice mode stays. It never writes the pit ledger.
 - Every hand stores the rules pack and its SHA-256 (`6D:pen0.75:S17:peek:…`).
 - Ledger panel shows pit RTP, hands/hour, and the last 20 hands.
 - Burst rate limit (8/sec, 80/min) on pit actions.
+- Retired shoe: last seed + last commit, checked on the server (`seedOk`).
+- Pit seat bound to the browser that opened it.
 - HMAC shoe shuffle is still play-chip grade — a lab will name the seeder later.
 
 ### Phase 3 — Real money (only after licenses)

@@ -12,6 +12,8 @@ import { fetchHands, fetchPitStats, fetchWallet } from "@/lib/casino/api";
 import type { HandRow, LedgerRow, PitStats } from "@/lib/casino/types";
 import { TABLE_MIN } from "@/lib/blackjack/money";
 import { handProof } from "@/lib/casino/history";
+import { formatSeated } from "@/lib/casino/reality";
+import { commitFromSeed, isSeedHex } from "@/lib/casino/verify";
 import { PlayingCard } from "./PlayingCard";
 import { handLabel } from "@/lib/blackjack/hand";
 
@@ -53,6 +55,9 @@ export function SettingsPanel({
   const seedReveal = useTable((s) => s.seedReveal);
   const lastSeedCommit = useTable((s) => s.lastSeedCommit);
   const seedOk = useTable((s) => s.seedOk);
+  const cooloffUntil = useTable((s) => s.cooloffUntil);
+  const selfExcludedUntil = useTable((s) => s.selfExcludedUntil);
+  const sessionNet = useTable((s) => s.sessionNet);
   const rulesPack = useTable((s) => s.rulesPack);
 
   return (
@@ -146,6 +151,18 @@ export function SettingsPanel({
               Play chips. Loss limit, cool-off, and self-exclude are enforced on
               the server. They are not a substitute for a licensed RG programme.
             </p>
+            {lossLimit > 0 && (
+              <p className="text-sm text-ivory">
+                Cap {dollars(Math.max(0, lossLimit - Math.max(0, -sessionNet)))} left
+                <span className="text-muted"> · {dollars(Math.max(0, -sessionNet))} of {dollars(lossLimit)} gone</span>
+              </p>
+            )}
+            {untilLeft(cooloffUntil) && (
+              <p className="text-sm text-ivory">Cool-off lifts in {untilLeft(cooloffUntil)}</p>
+            )}
+            {untilLeft(selfExcludedUntil) && (
+              <p className="text-sm text-ivory">Self-exclude lifts in {untilLeft(selfExcludedUntil)}</p>
+            )}
             {seedCommit && (
               <div className="space-y-1">
                 <p className="break-all font-mono text-[0.6rem] text-muted">
@@ -164,6 +181,7 @@ export function SettingsPanel({
                 )}
               </div>
             )}
+            <SeedCheck lastCommit={lastSeedCommit} liveCommit={seedCommit} />
             <div className="flex flex-wrap gap-2">
               {[0, 100, 250, 500].map((n) => (
                 <button
@@ -355,6 +373,7 @@ export function StatsPanel({
 
 function HandReplay({ hand }: { hand: HandRow }) {
   const hideHole = hand.status !== "settled";
+  const [copied, setCopied] = useState(false);
   return (
     <div className="space-y-3 border-t border-border px-3 py-3">
       {hand.dealer && (
@@ -407,11 +426,60 @@ function HandReplay({ hand }: { hand: HandRow }) {
         type="button"
         className="h-11 rounded-[var(--radius-sm)] border border-border px-3 text-xs uppercase tracking-[0.14em] text-muted hover:bg-fg/6"
         onClick={() => {
-          void navigator.clipboard?.writeText(handProof(hand));
+          void navigator.clipboard?.writeText(handProof(hand)).then(() => {
+            setCopied(true);
+            window.setTimeout(() => setCopied(false), 2000);
+          });
         }}
       >
-        Copy proof
+        {copied ? "Copied" : "Copy proof"}
       </button>
+    </div>
+  );
+}
+
+function untilLeft(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const t = Date.parse(iso);
+  if (!Number.isFinite(t) || t <= Date.now()) return null;
+  return formatSeated(t - Date.now());
+}
+
+function SeedCheck({ lastCommit, liveCommit }: { lastCommit: string | null; liveCommit: string | null }) {
+  const [hex, setHex] = useState("");
+  const [note, setNote] = useState<string | null>(null);
+
+  return (
+    <div className="space-y-2">
+      <p className="text-[0.7rem] uppercase tracking-[0.16em] text-muted">Check a seed</p>
+      <input
+        value={hex}
+        onChange={(e) => setHex(e.target.value.trim().toLowerCase())}
+        spellCheck={false}
+        autoComplete="off"
+        placeholder="Paste a 64-hex reveal"
+        className="h-11 w-full rounded-[var(--radius-sm)] border border-border bg-felt-deep/50 px-3 font-mono text-xs text-ivory placeholder:text-muted focus:border-ivory/30 focus:outline-none"
+      />
+      <Button
+        type="button"
+        variant="outline"
+        className="w-full"
+        onClick={() => {
+          void (async () => {
+            if (!isSeedHex(hex)) {
+              setNote("Need a 64-character hex seed.");
+              return;
+            }
+            const commit = await commitFromSeed(hex);
+            if (lastCommit && commit === lastCommit) setNote("Matches the last retired shoe.");
+            else if (liveCommit && commit === liveCommit) setNote("That hashes to the live commit.");
+            else setNote("Does not match this table.");
+          })();
+        }}
+      >
+        Hash and compare
+      </Button>
+      {note && <p className="text-xs text-muted">{note}</p>}
     </div>
   );
 }

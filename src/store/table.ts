@@ -58,6 +58,8 @@ interface TableState {
   sessionStartedAt: number;
   sessionNet: number;
   lossLimit: number;
+  cooloffUntil: string | null;
+  selfExcludedUntil: string | null;
   rulesPack: string | null;
   rulesHash: string | null;
   seat: () => void;
@@ -308,6 +310,8 @@ export const useTable = create<TableState>((set, get) => {
       sessionStartedAt: view.sessionStartedAt,
       sessionNet: view.sessionNet,
       lossLimit: view.lossLimit,
+      cooloffUntil: view.cooloffUntil,
+      selfExcludedUntil: view.selfExcludedUntil,
       rulesPack: view.rulesPack,
       rulesHash: view.rulesHash,
       pitBusy: false,
@@ -446,6 +450,8 @@ export const useTable = create<TableState>((set, get) => {
     sessionStartedAt: 0,
     sessionNet: 0,
     lossLimit: 0,
+    cooloffUntil: null,
+    selfExcludedUntil: null,
     rulesPack: null,
     rulesHash: null,
 

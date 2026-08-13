@@ -14,6 +14,7 @@ import { nextAutoStep } from "@/lib/blackjack/autoplay";
 import { needsRealityAck, formatSeated } from "./reality";
 import { assertRate, _resetRateForTests } from "./rate";
 import { REALITY_MS } from "./types";
+import { commitFromSeed } from "./verify";
 import { rulesFingerprint } from "@/lib/blackjack/rules";
 import { DEFAULT_RULES } from "@/lib/blackjack/types";
 import type { Card, Rank, Suit } from "@/lib/blackjack/types";
@@ -178,11 +179,12 @@ describe("casino phase 2", () => {
     assert.equal(parseDevice({ device: "nope" }), "");
   });
 
-  it("retired seed hashes to its commit", () => {
+  it("retired seed hashes to its commit", async () => {
     const seed = newSeed();
     const commit = commitSeed(seed);
     assert.equal(commitSeed(seed), commit);
     assert.notEqual(commitSeed(newSeed()), commit);
+    assert.equal(await commitFromSeed(seed), commit);
   });
 
   it("refunds 21+3 when the live box is voided", () => {

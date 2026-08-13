@@ -25,6 +25,7 @@ export function Hud({
   const pitBusy = useTable((s) => s.pitBusy);
   const sessionStartedAt = useTable((s) => s.sessionStartedAt);
   const sessionNet = useTable((s) => s.sessionNet);
+  const lossLimit = useTable((s) => s.lossLimit);
   const { user, isPending } = useCurrentUserState();
   const tray = snap.bankroll + snap.pendingBet + plus3Pending;
   const [now, setNow] = useState(() => Date.now());
@@ -53,6 +54,13 @@ export function Hud({
             label="Seat"
             value={formatSeated(now - sessionStartedAt)}
             hint={sessionNet === 0 ? "even" : `${sessionNet > 0 ? "+" : ""}${dollars(sessionNet)}`}
+          />
+        )}
+        {mode === "pit" && lossLimit > 0 && (
+          <Stat
+            label="Cap"
+            value={dollars(Math.max(0, lossLimit - Math.max(0, -sessionNet)))}
+            hint={`${dollars(Math.max(0, -sessionNet))} of ${dollars(lossLimit)}`}
           />
         )}
         <Stat

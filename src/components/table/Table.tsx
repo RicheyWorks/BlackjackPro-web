@@ -196,7 +196,7 @@ export function Table() {
               {sessionNet === 0 ? "even" : `${sessionNet > 0 ? "+" : ""}${dollars(sessionNet)}`}
               . Next deal is locked until you confirm. Play chips only.
             </p>
-            <Button className="mt-5 w-full" onClick={() => ackReality()}>
+            <Button className="mt-5 w-full" autoFocus onClick={() => ackReality()}>
               Still playing
             </Button>
           </div>

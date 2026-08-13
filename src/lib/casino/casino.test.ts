@@ -8,6 +8,7 @@ import { parseOp } from "./parse";
 import { applyOp } from "./apply";
 import { dumpSession, parseBlob, type PitSession } from "./session";
 import { buildShuffledShoe, commitSeed, hmacIndex, newSeed } from "./rng.server";
+import { nextAutoStep } from "@/lib/blackjack/autoplay";
 import { needsRealityAck } from "./reality";
 import { assertRate, _resetRateForTests } from "./rate";
 import { REALITY_MS } from "./types";
@@ -162,5 +163,37 @@ describe("casino phase 2", () => {
   it("parses ackReality", () => {
     assert.equal(parseOp({ op: "ackReality" }).op, "ackReality");
   });
+
+  it("refunds 21+3 when the live box is voided", () => {
+    const s = session();
+    applyOp(s, { op: "addChip", n: 25, rail: "main" }, hooks);
+    applyOp(s, { op: "addChip", n: 25, rail: "plus3" }, hooks);
+    assert.equal(s.engine.bankroll, 950);
+    applyOp(s, { op: "newSession" }, hooks);
+    assert.equal(s.plus3Pending, 0);
+    assert.equal(s.engine.pendingBet, 0);
+    assert.equal(s.engine.bankroll, 1000);
+  });
+
+  it("stops the coach when the tray is under the minimum", () => {
+    const step = nextAutoStep({
+      phase: "BETTING",
+      canDeal: false,
+      canInsure: false,
+      canEvenMoney: false,
+      pendingBet: 0,
+      bankroll: 3,
+      countStake: 0,
+      trueCount: 0,
+      canHit: false,
+      canStand: false,
+      canDouble: false,
+      canSplit: false,
+      canSurrender: false,
+      soft17: false,
+    });
+    assert.equal(step.kind, "stop");
+  });
 });
+
 

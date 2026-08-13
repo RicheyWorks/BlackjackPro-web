@@ -189,7 +189,10 @@ export function applyOp(s: PitSession, op: PitOp, hooks: ApplyHooks): ApplyResul
       break;
     case "newSession":
       e.abandonRound();
-      s.plus3Pending = 0;
+      if (s.plus3Pending > 0) {
+        e.setBankroll(e.bankroll + s.plus3Pending);
+        s.plus3Pending = 0;
+      }
       s.plus3Last = null;
       s.handId = null;
       break;

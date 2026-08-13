@@ -31,6 +31,8 @@ export function Actions() {
   const countBet = useTable((s) => s.countBet);
   const clearBet = useTable((s) => s.clearBet);
   const newSession = useTable((s) => s.newSession);
+  const refillPit = useTable((s) => s.refillPit);
+  const mode = useTable((s) => s.mode);
   const autoplay = useTable((s) => s.autoplay);
   const setAutoplay = useTable((s) => s.setAutoplay);
 
@@ -79,9 +81,15 @@ export function Actions() {
           <p className="text-sm text-muted">
             {tray <= 0 ? "The rack is empty." : `Under the ${dollars(TABLE_MIN)} table minimum.`}
           </p>
-          <Button onClick={newSession} size="lg">
-            New session · $1,000
-          </Button>
+          {mode === "pit" ? (
+            <Button onClick={refillPit} size="lg">
+              Bust refill · $1,000 play chips
+            </Button>
+          ) : (
+            <Button onClick={newSession} size="lg">
+              New session · $1,000
+            </Button>
+          )}
         </div>
       );
     }

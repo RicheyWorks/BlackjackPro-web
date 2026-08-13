@@ -11,6 +11,7 @@ import { toView } from "./view";
 import { buildShuffledShoe, commitSeed, newHandId, newSeed } from "./rng.server";
 import { assertRate } from "./rate";
 import { needsRealityAck } from "./reality";
+import { TABLE_MIN } from "@/lib/blackjack/money";
 
 interface ProfileRow {
   age_attested: boolean;
@@ -175,6 +176,15 @@ async function openHand(sql: Sql, userId: string, s: PitSession, main: number, p
   `;
 }
 
+async function voidHand(sql: Sql, userId: string, handId: string | null): Promise<void> {
+  if (!handId) return;
+  await sql`
+    update casino_hands
+    set status = ${"void"}, settled_at = now()
+    where id = ${handId} and user_id = ${userId} and status = ${"open"}
+  `;
+}
+
 async function closeHand(sql: Sql, userId: string, s: PitSession): Promise<void> {
   if (!s.handId) return;
   const e = s.engine;
@@ -268,6 +278,9 @@ export async function runTable(userId: string, op: PitOp): Promise<PitView> {
     let session: PitSession | null = row ? parseBlob(row.live_json, row.bankroll, row.version) : null;
 
     if (row && !session) throw new Error("Pit snapshot unreadable.");
+    if (session && commitSeed(session.seed) !== session.seedCommit) {
+      throw new Error("Pit snapshot unreadable.");
+    }
 
     if (!session) {
       if (op.op !== "seat") throw new Error("Sit the pit first.");
@@ -282,7 +295,14 @@ export async function runTable(userId: string, op: PitOp): Promise<PitView> {
     }
 
     if (op.op === "refill") {
-      if (exposed(session) !== 0) throw new Error("Rack still has chips.");
+      const left = exposed(session);
+      if (left >= TABLE_MIN) throw new Error("Rack still has chips.");
+      session.engine.pendingBet = 0;
+      session.plus3Pending = 0;
+      session.engine.setBankroll(0);
+      if (left > 0) {
+        await writeLedger(sql, userId, -left, 0, "void", "absorb");
+      }
       session.engine.setBankroll(PLAY_GRANT);
       session.sessionAnchor = PLAY_GRANT;
       session.sessionStartedAt = Date.now();
@@ -306,6 +326,8 @@ export async function runTable(userId: string, op: PitOp): Promise<PitView> {
     const result = applyOp(session, op, { reshuffle, newHandId });
     const after = session.engine.bankroll;
     const delta = after - before;
+
+    if (op.op === "newSession") await voidHand(sql, userId, beforeHand);
 
     if ((op.op === "deal" || op.op === "rebetDeal") && session.handId && session.handId !== beforeHand) {
       await openHand(sql, userId, session, session.lastMainBet, session.lastPlus3Bet);

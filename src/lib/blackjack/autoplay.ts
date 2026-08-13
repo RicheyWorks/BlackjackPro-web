@@ -1,6 +1,7 @@
 import type { Card, HandState, Phase } from "./types";
 import { coachAdvice, takeInsuranceAt } from "./deviations";
 import type { Advice } from "./strategy";
+import { TABLE_MIN } from "./money";
 
 export type AutoStep =
   | { kind: "wait" }
@@ -45,6 +46,7 @@ export function nextAutoStep(s: AutoView): AutoStep {
       return { kind: "countBet" };
     }
     if (s.canDeal) return { kind: "deal" };
+    if (s.bankroll + s.pendingBet < TABLE_MIN) return { kind: "stop" };
     if (s.bankroll <= 0 && s.pendingBet <= 0) return { kind: "stop" };
     return { kind: "wait" };
   }
